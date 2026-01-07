@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>play1 실시간 멀티 대항전</title>
+    <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <style>
+        body { background: #111; color: #0f0; font-family: 'DungGeunMo', sans-serif; margin: 0; overflow: hidden; }
+        #lobby { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .start-btn { padding: 25px 70px; font-size: 2.5rem; background: #f1c40f; border: 6px outset #888; cursor: pointer; font-family: 'DungGeunMo'; border-radius: 10px; }
+        #room-view { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; width: 100vw; height: 100vh; gap: 15px; padding: 15px; box-sizing: border-box; }
+        .monitor-wrapper { border: 10px outset #aaa; background: #000; display: flex; flex-direction: column; cursor: pointer; transition: 0.3s; position: relative; }
+        .monitor-info { background: #333; color: #fff; padding: 5px 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px inset #555; }
+        .teacher-mini { font-size: 2.5rem; text-align: center; background: #222; border-bottom: 3px solid #444; }
+        .watching { background: #ff0000 !important; animation: shake 0.1s infinite; }
+        .board { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; flex: 1; padding: 10px; }
+        .card { height: 28px; background: #222; color: #444; font-size: 0.7rem; display: flex; justify-content: center; align-items: center; border-radius: 3px; border: 1px solid #333; }
+        .card.red { background: #e74c3c; color: white; border: none; }
+        .card.blue { background: #3498db; color: white; border: none; }
+        .input-box { width: 100%; padding: 15px; font-family: 'DungGeunMo'; font-size: 1.6rem; background: #000; color: #fff; border-top: 5px inset #555; text-align: center; box-sizing: border-box; }
+        .focused { position: fixed !important; inset: 2vh 2vw; width: 96vw !important; height: 96vh !important; z-index: 500; }
+        .blurred { filter: blur(12px) brightness(0.2); pointer-events: none; }
+        #top-score { position: fixed; top: 0; left: 50%; transform: translateX(-50%); z-index: 800; display: flex; gap: 50px; background: #222; padding: 5px 40px; border-radius: 0 0 20px 20px; border: 2px solid #555; border-top: none; align-items: center; }
+        @keyframes shake { 0% { transform: translate(1px, 1px); } 100% { transform: translate(-1px, -1px); } }
+    </style>
+</head>
+<body>
+
+<div id="lobby">
+    <h1 style="color:#f1c40f; font-size: 3.5rem; margin-bottom: 5px;">play1 서버 대항전</h1>
+    <p style="color:#fff; margin-bottom: 25px;">다른 컴퓨터와 실시간으로 연결되었습니다.</p>
+    <button class="start-btn" onclick="triggerStart()">수업 시작!</button>
+</div>
+
+<div id="top-score">
+    <div style="color:#e74c3c; font-size: 1.5rem;">RED: <span id="total-red">0</span></div>
+    <div id="main-timer" style="color:#fff; font-size: 1.8rem; min-width: 100px; text-align: center;">300.0s</div>
+    <div style="color:#3498db; font-size: 1.5rem;">BLUE: <span id="total-blue">0</span></div>
+</div>
+
+<div id="room-view">
+    <div class="monitor-wrapper" id="mon-1" onclick="focusMon(1)">
+        <div class="monitor-info"><span>#01</span><span style="color:#e74c3c">RED</span></div>
+        <div class="teacher-mini" id="teacher-1">👨‍🏫</div>
+        <div class="board" id="board-1"></div>
+        <input type="text" id="input-1" class="input-box" placeholder="클릭해서 확대 후 입력" onkeydown="sendWord(event, 'red')">
+    </div>
+    <div class="monitor-wrapper" id="mon-2" onclick="focusMon(2)">
+        <div class="monitor-info"><span>#02</span><span style="color:#3498db">BLUE</span></div>
+        <div class="teacher-mini" id="teacher-2">👨‍🏫</div>
+        <div class="board" id="board-2"></div>
+        <input type="text" id="input-2" class="input-box" placeholder="클릭해서 확대 후 입력" onkeydown="sendWord(event, 'blue')">
+    </div>
+    <div class="monitor-wrapper" id="mon-3" onclick="focusMon(3)">
+        <div class="monitor-info"><span>#03</span><span style="color:#e74c3c">RED</span></div>
+        <div class="teacher-mini" id="teacher-3">👨‍🏫</div>
+        <div class="board" id="board-3"></div>
+        <input type="text" id="input-3" class="input-box" placeholder="클릭해서 확대 후 입력" onkeydown="sendWord(event, 'red')">
+    </div>
+    <div class="monitor-wrapper" id="mon-4" onclick="focusMon(4)">
+        <div class="monitor-info"><span>#04</span><span style="color:#3498db">BLUE</span></div>
+        <div class="teacher-mini" id="teacher-4">👨‍🏫</div>
+        <div class="board" id="board-4"></div>
+        <input type="text" id="input-4" class="input-box" placeholder="클릭해서 확대 후 입력" onkeydown="sendWord(event, 'blue')">
+    </div>
+</div>
+
+<script>
+    // 주신 주소로 정확히 설정했습니다!
+    const firebaseConfig = {
+        databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref('typing_game_v1');
+
+    const schoolWords = ["떡볶이", "급식", "운동장", "받아쓰기", "방학", "우유급식", "알림장", "짝꿍", "준비물", "실내화", "색종이", "딱지", "슬러시", "피카츄", "학원", "숙제", "체육", "소풍", "쉬는시간", "지우개", "필통", "실로폰", "리코더", "반장", "일기", "독서", "피구", "태권도", "문방구", "뽑기", "분식집", "교실", "모둠활동", "교장선생님", "운동회", "매점", "칠판", "분필", "실내화가방", "정문"];
+    let isWatching = false, hasStarted = false;
+
+    for(let i=1; i<=4; i++) {
+        const b = document.getElementById(`board-${i}`);
+        schoolWords.forEach(w => {
+            const c = document.createElement('div');
+            c.className = 'card'; c.innerText = w; c.id = `card-${i}-${w}`;
+            b.appendChild(c);
+        });
+    }
+
+    db.on('value', (snap) => {
+        const data = snap.val();
+        if(!data) return;
+        if(data.state === 'START' && !hasStarted) {
+            hasStarted = true;
+            document.getElementById('lobby').style.display = 'none';
+            startTimer();
+        }
+        let r=0, b=0;
+        schoolWords.forEach(w => {
+            const owner = (data.cards && data.cards[w]) ? data.cards[w] : null;
+            if(owner) owner === 'red' ? r++ : b++;
+            for(let i=1; i<=4; i++) {
+                document.getElementById(`card-${i}-${w}`).className = 'card' + (owner ? ' ' + owner : '');
+            }
+        });
+        document.getElementById('total-red').innerText = r;
+        document.getElementById('total-blue').innerText = b;
+    });
+
+    function triggerStart() {
+        db.set({ state: 'START', cards: {}, time: Date.now() });
+    }
+
+    function sendWord(e, team) {
+        if(e.key === 'Enter') {
+            const val = e.target.value.trim();
+            if(isWatching) { e.target.value = ''; return; }
+            db.child('cards').transaction((c) => {
+                if(!c) c = {};
+                if(schoolWords.includes(val) && !c[val]) c[val] = team;
+                return c;
+            });
+            e.target.value = '';
+        }
+    }
+
+    function focusMon(id) {
+        document.querySelectorAll('.monitor-wrapper').forEach(m => m.classList.add('blurred'));
+        const target = document.getElementById(`mon-${id}`);
+        target.classList.remove('blurred'); target.classList.add('focused');
+        document.getElementById(`input-${id}`).focus();
+    }
+
+    function unfocus() {
+        document.querySelectorAll('.monitor-wrapper').forEach(m => m.classList.remove('blurred', 'focused'));
+    }
+
+    function startTimer() {
+        let timeLeft = 3000;
+        setInterval(() => {
+            if(timeLeft > 0) {
+                timeLeft--;
+                document.getElementById('main-timer').innerText = (timeLeft/10).toFixed(1) + "s";
+                if(timeLeft % 200 < 40) {
+                    isWatching = true;
+                    for(let i=1; i<=4; i++) document.getElementById(`teacher-${i}`).classList.add('watching');
+                } else {
+                    isWatching = false;
+                    for(let i=1; i<=4; i++) document.getElementById(`teacher-${i}`).classList.remove('watching');
+                }
+            }
+        }, 100);
+    }
+    window.addEventListener('keydown', (e) => { if(e.key === 'Escape') unfocus(); });
+</script>
+</body>
+</html>
