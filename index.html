@@ -2,12 +2,12 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>타자 배틀 V66 - 완벽 초성 배틀</title>
+    <title>타자 배틀 V67 - 초성 영토 점령전</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
-        :root { --red: #FF0000; --blue: #0000FF; --yellow: #feca57; --dark: #1e272e; --bg: #f1f2f6; --gold: #ffd700; }
+        :root { --red: #FF4757; --blue: #2E86DE; --yellow: #feca57; --dark: #1e272e; --bg: #f1f2f6; --gold: #ffd700; }
         body { background: var(--bg); color: #fff; font-family: 'DungGeunMo', sans-serif; margin: 0; overflow: hidden; }
         
         #round-selector { position: fixed; inset: 0; background: var(--dark); z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -26,34 +26,31 @@
         .monitor.focused { position: fixed !important; inset: 80px 20px 20px 20px; z-index: 1500; border-width: 15px; }
 
         .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; flex: 1; padding: 15px; pointer-events: none; }
-        .card-container { height: 60px; perspective: 600px; }
-        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.4s; transform-style: preserve-3d; }
-        .is-flipped .card-inner { transform: rotateY(180deg); }
-        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border: 2px solid var(--dark); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-        .card-front { background: white; color: #000; font-size: 0.8rem; font-weight: bold; }
-        .card-back { transform: rotateY(180deg); color: white; font-size: 0.8rem; font-weight: bold; }
-        .back-red { background: #d63031; }
-        .back-blue { background: #0984e3; }
+        .cell { height: 60px; border: 2px solid rgba(0,0,0,0.1); background: #eee; border-radius: 6px; transition: 0.3s; position: relative; }
+        .cell.red { background: var(--red); border-color: #b30000; box-shadow: inset 0 0 10px rgba(0,0,0,0.2); }
+        .cell.blue { background: var(--blue); border-color: #0000b3; box-shadow: inset 0 0 10px rgba(0,0,0,0.2); }
+        
+        /* 1,2라운드용 텍스트 */
+        .cell-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #000; font-weight: bold; }
+        .cell.red .cell-text, .cell.blue .cell-text { color: #fff; }
+        body.round-3-active .cell-text { display: none; } /* 3라운드는 글자 안보임 */
 
-        .chosung-display { display: none; background: #222; color: #00ff00; font-size: 3.5rem; text-align: center; padding: 15px; border-top: 6px solid var(--dark); letter-spacing: 10px; text-shadow: 0 0 10px #00ff00; }
-        body.round-3-active .chosung-display { display: block; }
+        .chosung-panel { display: none; background: #000; color: #00ff00; font-size: 4rem; text-align: center; padding: 15px; border-top: 6px solid var(--dark); letter-spacing: 15px; text-shadow: 0 0 15px #00ff00; }
+        body.round-3-active .chosung-panel { display: block; }
 
         .input-box { width: 100%; padding: 25px; font-family: 'DungGeunMo'; font-size: 3rem; border: none; border-top: 6px solid var(--dark); text-align: center; outline: none; }
         .start-btn { display: none; padding: 25px 60px; font-size: 3rem; background: var(--yellow); border: 8px outset #fff; cursor: pointer; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3000; font-family: 'DungGeunMo'; }
         .focused .start-btn { display: block; }
         body.game-on .start-btn { display: none !important; }
-
-        #bonus-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); background: var(--gold); border: 10px solid var(--dark); padding: 40px; z-index: 2500; color: #000; text-align: center; transition: 0.4s; }
-        #bonus-popup.active { transform: translate(-50%, -50%) scale(1); }
     </style>
 </head>
 <body id="main-body">
 
 <div id="round-selector">
-    <h1 style="font-size: 4rem; margin-bottom: 40px; color: var(--yellow);">🏫 타자 학교 V66 🏫</h1>
+    <h1 style="font-size: 4rem; margin-bottom: 40px; color: var(--yellow);">🏫 타자 학교 V67 🏫</h1>
     <button class="round-btn" style="background:#00b894;" onclick="selectRound(1)">1라운드: 텍스트 모드</button>
     <button class="round-btn" style="background:#6c5ce7;" onclick="selectRound(2)">2라운드: 이모지 모드</button>
-    <button class="round-btn" style="background:#e67e22;" onclick="selectRound(3)">3라운드: 초성 배틀 (글자수 일치)</button>
+    <button class="round-btn" style="background:#e67e22;" onclick="selectRound(3)">3라운드: 초성 점령전 (10초)</button>
 </div>
 
 <div id="countdown">3</div>
@@ -63,11 +60,6 @@
         <p id="final-score" style="font-size: 2rem;"></p>
         <button onclick="location.reload()" style="padding:15px 40px; font-family:'DungGeunMo'; cursor:pointer; font-size:1.5rem;">처음으로</button>
     </div>
-</div>
-
-<div id="bonus-popup">
-    <h2 style="margin:0; font-size: 2rem;">💥 보너스 타취! 💥</h2>
-    <div id="bonus-word-display" style="font-size: 4rem; background:#fff; margin:20px 0; padding:15px; border:6px dashed #000;">단어</div>
 </div>
 
 <div id="top-bar">
@@ -85,8 +77,8 @@
                     <button class="start-btn" id="start-btn-${i}" onclick="requestStart(event)">🚀 시작</button>
                     <div class="teacher-box" id="teach-${i}" style="color:#000; text-align:center; padding:5px; background:#fff; border-bottom:2px solid #000;">👨‍🏫 대기</div>
                     <div class="board" id="board-${i}"></div>
-                    <div class="chosung-display" id="chosung-box-${i}">??</div>
-                    <input type="text" id="input-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="입력!" disabled>
+                    <div class="chosung-panel" id="chosung-box-${i}">??</div>
+                    <input type="text" id="input-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="준비!" disabled>
                 </div>
             `);
         }
@@ -94,13 +86,9 @@
 </div>
 
 <script>
-    const wordSet = [
-        {t: "떡볶이"}, {t: "피자"}, {t: "햄버거"}, {t: "사과"}, {t: "포도"}, {t: "축구"}, {t: "농구"}, {t: "야구"}, {t: "수영"}, {t: "자전거"},
-        {t: "학교"}, {t: "선생님"}, {t: "책상"}, {t: "연필"}, {t: "노트"}, {t: "강아지"}, {t: "고양이"}, {t: "토끼"}, {t: "사자"}, {t: "코끼리"},
-        {t: "비행기"}, {t: "기차"}, {t: "자동차"}, {t: "경찰차"}, {t: "소방차"}, {t: "태양"}, {t: "달"}, {t: "별"}, {t: "구름"}, {t: "무지개"},
-        {t: "컴퓨터"}, {t: "스마트폰"}, {t: "게임"}, {t: "텔레비전"}, {t: "카메라"}, {t: "우산"}, {t: "안경"}, {t: "시계"}, {t: "선물"}, {t: "풍선"}
-    ];
-
+    // 초성 추출용 샘플 데이터 (글자수 2~4자 골고루)
+    const samples = ["사과", "포도", "학교", "기차", "수영", "바다", "태양", "축구", "노트", "연필", "떡볶이", "자동차", "컴퓨터", "선생님", "무지개", "눈사람", "경찰차", "텔레비전", "스마트폰"];
+    
     function getChosung(str) {
         const cho = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
         let result = "";
@@ -114,10 +102,10 @@
 
     let currentRound = 1;
     let currentChosung = "";
-    let usedWordsInTurn = new Set(); // 한 초성 타임에 중복 입력 방지용
+    let usedWords = new Set();
     const firebaseConfig = { databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database().ref('game_visual_v66');
+    const db = firebase.database().ref('game_visual_v67');
 
     let monTeams = { 1: null, 2: null, 3: null, 4: null };
     let hasStarted = false, isWatching = false, isGameOver = false;
@@ -125,7 +113,7 @@
     async function selectRound(r) {
         currentRound = r;
         if(r === 3) document.getElementById('main-body').classList.add('round-3-active');
-        await db.set({ state: 'WAITING', cards: {}, bonusWord: "", globalChosung: "" });
+        await db.set({ state: 'WAITING', cards: {}, globalChosung: "" });
         document.getElementById('round-selector').style.display = 'none';
         document.getElementById('room-view').style.display = 'grid';
         document.getElementById('round-disp').innerText = `Round ${r}`;
@@ -136,15 +124,18 @@
         for(let i=1; i<=4; i++){
             const b = document.getElementById(`board-${i}`);
             b.innerHTML = "";
-            wordSet.forEach(item => {
+            for(let j=0; j<40; j++) { // 40개의 점령 칸
                 const c = document.createElement('div');
-                c.className = 'card-container'; c.id = `card-${i}-${item.t}`;
-                c.innerHTML = `<div class="card-inner">
-                    <div class="card-front">${item.t}</div>
-                    <div class="card-back" id="back-${i}-${item.t}">${item.t}</div>
-                </div>`;
+                c.className = 'cell'; 
+                c.id = `cell-${i}-${j}`;
+                // 1,2 라운드라면 글자를 넣어줌 (샘플용)
+                if(currentRound < 3) {
+                    const word = samples[j % samples.length];
+                    c.setAttribute('data-word', word);
+                    c.innerHTML = `<div class="cell-text">${word}</div>`;
+                }
                 b.appendChild(c);
-            });
+            }
         }
     }
 
@@ -154,7 +145,7 @@
         
         if(currentChosung !== d.globalChosung) {
             currentChosung = d.globalChosung || "";
-            usedWordsInTurn.clear(); // 초성 바뀌면 중복 체크 초기화
+            usedWords.clear();
         }
 
         for(let i=1; i<=4; i++) {
@@ -162,17 +153,24 @@
             if(cb) cb.innerText = currentChosung || "??";
         }
 
-        wordSet.forEach(item => {
-            const team = d.cards?.[item.t]?.team;
-            for(let i=1; i<=4; i++){
-                const c = document.getElementById(`card-${i}-${item.t}`);
-                const b = document.getElementById(`back-${i}-${item.t}`);
-                if(c && team) { c.classList.add('is-flipped'); if(b) b.className = `card-back back-${team}`; }
-                else if(c) { c.classList.remove('is-flipped'); }
+        // 전체 카드(칸) 상태 업데이트
+        const cards = d.cards || {};
+        for(let i=1; i<=4; i++) {
+            for(let j=0; j<40; j++) {
+                const cell = document.getElementById(`cell-${i}-${j}`);
+                const status = cards[j]; // 0~39번 칸의 상태
+                cell.classList.remove('red', 'blue');
+                if(status) cell.classList.add(status.team);
             }
+        }
+        
+        let redCount = 0, blueCount = 0;
+        Object.values(cards).forEach(v => {
+            if(v.team === 'red') redCount++;
+            if(v.team === 'blue') blueCount++;
         });
-        document.getElementById('total-red').innerText = Object.values(d.cards||{}).filter(v=>v.team==='red').length;
-        document.getElementById('total-blue').innerText = Object.values(d.cards||{}).filter(v=>v.team==='blue').length;
+        document.getElementById('total-red').innerText = redCount;
+        document.getElementById('total-blue').innerText = blueCount;
     });
 
     function requestStart(e) { e.stopPropagation(); db.update({ state: 'START' }); }
@@ -188,7 +186,6 @@
             else {
                 clearInterval(itv); cd.style.display = 'none';
                 monTeams = { 1: 'red', 2: 'blue', 3: 'red', 4: 'blue' };
-                updateMonitorUI();
                 hasStarted = true;
                 document.body.classList.add('game-on');
                 document.querySelectorAll('.input-box').forEach(i => i.disabled = false);
@@ -197,55 +194,55 @@
         }, 1000);
     }
 
-    function updateMonitorUI() {
-        for(let i=1; i<=4; i++) {
-            const m = document.getElementById(`mon-${i}`);
-            if(m && monTeams[i]) m.classList.add(`team-${monTeams[i]}`);
-        }
-    }
-
     function handleInput(e, id) {
         if(e.key === 'Enter' && !isGameOver) {
             const val = e.target.value.trim();
             const myTeam = monTeams[id];
 
             if(currentRound === 3) {
-                // 🚨 3라운드 핵심: 초성 일치 + 글자수 일치 + 중복 아님
                 if(getChosung(val) === currentChosung && val.length === currentChosung.length) {
-                    if(!usedWordsInTurn.has(val)) {
-                        usedWordsInTurn.add(val);
-                        stealCards(myTeam, 1);
+                    if(!usedWords.has(val)) {
+                        usedWords.add(val);
+                        occupyCell(myTeam);
                     }
                 }
             } else {
-                if(isWatching) applyPenalty(myTeam, 1);
-                else if(wordSet.some(w => w.t === val)) {
-                    db.child('cards').child(val).set({ team: myTeam, t: Date.now() });
+                if(isWatching) { /* 페널티 로직 추가 가능 */ }
+                else {
+                    // 1,2라운드: 단어가 일치하는 칸 찾기
+                    for(let j=0; j<40; j++) {
+                        const cell = document.getElementById(`cell-${id}-${j}`);
+                        if(cell.getAttribute('data-word') === val) {
+                            db.child('cards').child(j).set({ team: myTeam });
+                            break;
+                        }
+                    }
                 }
             }
             e.target.value = '';
         }
     }
 
-    function stealCards(myTeam, count) {
+    function occupyCell(myTeam) {
         const enemy = myTeam === 'red' ? 'blue' : 'red';
         db.child('cards').once('value', snap => {
             const cards = snap.val() || {};
-            let targets = Object.keys(cards).filter(k => cards[k].team === enemy);
-            if(targets.length === 0) targets = wordSet.map(w => w.t).filter(t => !cards[t]);
-            targets.sort(() => Math.random() - 0.5);
-            for(let i=0; i<count && i<targets.length; i++) {
-                db.child('cards').child(targets[i]).set({ team: myTeam, t: Date.now() });
+            let targets = [];
+            // 1순위: 상대방 칸 뺏기, 2순위: 빈 칸 차지하기
+            let enemyCells = [];
+            let emptyCells = [];
+            for(let i=0; i<40; i++) {
+                if(cards[i]?.team === enemy) enemyCells.push(i);
+                else if(!cards[i]) emptyCells.push(i);
             }
-        });
-    }
-
-    function applyPenalty(team, count) {
-        db.child('cards').once('value', snap => {
-            const cards = snap.val(); if(!cards) return;
-            let targets = Object.keys(cards).filter(k => cards[k].team === team);
-            targets.sort((a,b) => cards[b].t - cards[a].t);
-            for(let i=0; i<count && i<targets.length; i++) db.child('cards').child(targets[i]).remove();
+            
+            let finalTarget;
+            if(enemyCells.length > 0) finalTarget = enemyCells[Math.floor(Math.random()*enemyCells.length)];
+            else if(emptyCells.length > 0) finalTarget = emptyCells[Math.floor(Math.random()*emptyCells.length)];
+            
+            if(finalTarget !== undefined) {
+                db.child('cards').child(finalTarget).set({ team: myTeam });
+            }
         });
     }
 
@@ -256,10 +253,9 @@
                 time--;
                 document.getElementById('timer-disp').innerText = (time/10).toFixed(1) + "s";
                 
-                // 10초마다 초성 변경
                 if(currentRound === 3 && time % 100 === 0) {
-                    const randomWord = wordSet[Math.floor(Math.random()*wordSet.length)].t;
-                    db.update({ globalChosung: getChosung(randomWord) });
+                    const rand = samples[Math.floor(Math.random()*samples.length)];
+                    db.update({ globalChosung: getChosung(rand) });
                 }
 
                 if(currentRound !== 3) {
@@ -267,17 +263,11 @@
                     isWatching = (watchPos >= 170);
                     for(let i=1; i<=4; i++) {
                         const t = document.getElementById(`teach-${i}`);
-                        if(t) {
-                            t.innerText = isWatching ? "🚨 감시 중! 🚨" : "👨‍🏫 칠판 보는 중";
-                            t.style.background = isWatching ? "#ff4757" : "#fff";
-                        }
+                        t.innerText = isWatching ? "🚨 감시 중!" : "👨‍🏫 보는 중";
+                        t.style.background = isWatching ? "#ff4757" : "#fff";
                     }
                 } else {
-                    for(let i=1; i<=4; i++) {
-                        const t = document.getElementById(`teach-${i}`);
-                        t.innerText = "🔥 글자 수 맞춰서 입력! 🔥";
-                        t.style.background = "#ffd700";
-                    }
+                    for(let i=1; i<=4; i++) document.getElementById(`teach-${i}`).innerText = "🔥 초성 점령전! 🔥";
                 }
             } else { clearInterval(timer); endGame(); }
         }, 100);
