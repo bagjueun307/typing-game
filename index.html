@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>타자 배틀 V50 - 최종 승부</title>
+    <title>타자 배틀 V51 - 클릭 수정본</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
@@ -10,11 +10,11 @@
         :root { --red: #FF0000; --blue: #0000FF; --yellow: #feca57; --dark: #2f3542; --bg: #f1f2f6; }
         body { background: var(--bg); color: #fff; font-family: 'DungGeunMo', sans-serif; margin: 0; overflow: hidden; }
         
-        /* 안내 및 결과 레이어 */
-        #lobby-guide { position: fixed; inset: 0; background: rgba(255,255,255,0.85); z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #000; }
-        #countdown { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000; display: none; align-items: center; justify-content: center; font-size: 10rem; color: var(--yellow); }
+        /* 🚨 수정: pointer-events: none 추가하여 클릭 통과 가능하게 함 */
+        #lobby-guide { position: fixed; inset: 0; background: rgba(255,255,255,0.7); z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #000; pointer-events: none; }
         
-        /* 결과 팝업 */
+        #countdown { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000; display: none; align-items: center; justify-content: center; font-size: 10rem; color: var(--yellow); pointer-events: none; }
+        
         #result-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 4000; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
         .win-box { background: white; padding: 40px; border: 10px double var(--dark); color: #000; }
 
@@ -23,11 +23,12 @@
         
         #main-progress-bar { position: fixed; top: 65px; left: 0; height: 12px; background: #00b894; z-index: 850; transition: 0.1s linear; width: 100%; }
 
-        .start-btn { display: none; padding: 25px 60px; font-size: 2.5rem; background: var(--yellow); border: 8px outset #fff; cursor: pointer; font-family: 'DungGeunMo'; }
+        /* 시작 버튼 클릭 가능하게 보장 */
+        .start-btn { display: none; padding: 25px 60px; font-size: 2.5rem; background: var(--yellow); border: 8px outset #fff; cursor: pointer; font-family: 'DungGeunMo'; pointer-events: auto; }
         .focused .start-btn { display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2100; }
 
         #room-view { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; width: 100vw; height: 100vh; gap: 20px; padding: 100px 20px 20px; box-sizing: border-box; }
-        .monitor { border: 8px solid var(--dark); display: flex; flex-direction: column; position: relative; background: #fff; cursor: pointer; transition: 0.3s; }
+        .monitor { border: 8px solid var(--dark); display: flex; flex-direction: column; position: relative; background: #fff; cursor: pointer; transition: 0.3s; pointer-events: auto; }
         .monitor.team-red { background: var(--red) !important; }
         .monitor.team-blue { background: var(--blue) !important; }
         .monitor.focused { position: fixed !important; inset: 80px 30px 30px 30px; width: auto !important; height: auto !important; z-index: 1500; cursor: default; }
@@ -35,7 +36,7 @@
         .teacher-box { font-size: 2rem; text-align: center; padding: 10px; background: rgba(255,255,255,0.9); border-bottom: 4px solid var(--dark); color: #000; }
         .teacher-box.watching { background: #ff4757; animation: shake 0.1s infinite; color: #fff; }
 
-        .board { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; flex: 1; padding: 12px; }
+        .board { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; flex: 1; padding: 12px; pointer-events: none; }
         .card-container { height: 42px; perspective: 600px; }
         .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.4s; transform-style: preserve-3d; }
         .is-flipped .card-inner { transform: rotateY(180deg); }
@@ -45,9 +46,9 @@
         .back-red { background: #d63031; }
         .back-blue { background: #0984e3; }
 
-        .input-box { width: 100%; padding: 15px; font-family: 'DungGeunMo'; font-size: 2rem; border: none; border-top: 6px solid var(--dark); text-align: center; outline: none; }
+        .input-box { width: 100%; padding: 15px; font-family: 'DungGeunMo'; font-size: 2rem; border: none; border-top: 6px solid var(--dark); text-align: center; outline: none; pointer-events: auto; }
         .blurred { filter: blur(15px); opacity: 0.3; pointer-events: none; }
-        #bonus-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); background: #f1c40f; border: 8px solid var(--dark); padding: 25px; z-index: 1800; color: #000; transition: 0.3s; }
+        #bonus-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); background: #f1c40f; border: 8px solid var(--dark); padding: 25px; z-index: 1800; color: #000; transition: 0.3s; pointer-events: none; }
         #bonus-popup.active { transform: translate(-50%, -50%) scale(1); }
         @keyframes shake { 0% { transform: translate(1px, 1px); } 100% { transform: translate(-1px, -1px); } }
     </style>
@@ -59,13 +60,13 @@
     <div class="win-box">
         <h1 id="winner-text" style="font-size: 4rem; margin: 0;">팀 승리!</h1>
         <p id="final-score" style="font-size: 2rem;">RED: 0 | BLUE: 0</p>
-        <button onclick="location.reload()" style="padding:10px 30px; font-family:'DungGeunMo'; cursor:pointer;">다시 하기</button>
+        <button onclick="resetGame()" style="padding:15px 40px; font-family:'DungGeunMo'; cursor:pointer; font-size:1.5rem;">다시 하기</button>
     </div>
 </div>
 
 <div id="lobby-guide">
-    <h1 style="color:#d63031;">🏫 도트 타자 학교 🏫</h1>
-    <div style="font-size: 2rem; margin-bottom:20px;">자신의 모니터를 클릭한 후 [시작]을 누르세요!</div>
+    <h1 style="color:#d63031; font-size: 3rem;">🏫 도트 타자 학교 🏫</h1>
+    <div style="font-size: 1.8rem;">자신의 모니터를 클릭해 확대하고<br>[시작] 버튼을 누르세요!</div>
 </div>
 
 <div id="top-bar">
@@ -110,13 +111,13 @@
 <script>
     const firebaseConfig = { databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database().ref('game_v50');
-    db.set({ state: 'WAITING', cards: {}, bonusWord: "" }); // 초기화
+    const db = firebase.database().ref('game_v51');
 
     const words = ["떡볶이", "급식", "운동장", "방학", "알림장", "짝꿍", "준비물", "실내화", "딱지", "슬러시", "피카츄", "학원", "숙제", "체육", "소풍", "쉬는시간", "지우개", "필통", "리코더", "반장", "일기", "독서", "피구", "태권도", "문방구", "교실", "매점", "칠판", "분필", "정문", "교가", "현장학습", "개학", "교장실", "과학실", "음악실", "복도", "실내화가방", "받아쓰기", "방과후"];
     let monTeams = { 1: 'red', 2: 'blue', 3: 'red', 4: 'blue' };
     let hasStarted = false, isWatching = false, isCounting = false, isGameOver = false, activeBonus = "";
 
+    // 보드 생성
     for(let i=1; i<=4; i++){
         const b = document.getElementById(`board-${i}`);
         words.forEach(w => {
@@ -130,6 +131,8 @@
     db.on('value', snap => {
         const d = snap.val(); if(!d) return;
         if(d.state === 'START' && !hasStarted && !isCounting) startCountDown();
+        if(d.state === 'WAITING') { location.reload(); } // 누군가 리셋하면 다 같이 새로고침
+        
         activeBonus = d.bonusWord || "";
         document.getElementById('bonus-popup').classList.toggle('active', !!activeBonus);
         if(activeBonus) document.getElementById('bonus-word-txt').innerText = activeBonus;
@@ -146,6 +149,17 @@
         document.getElementById('total-red').innerText = Object.values(d.cards||{}).filter(v=>v.team==='red').length;
         document.getElementById('total-blue').innerText = Object.values(d.cards||{}).filter(v=>v.team==='blue').length;
     });
+
+    function focusMon(id) {
+        if(isGameOver) return;
+        document.querySelectorAll('.monitor').forEach(el => el.classList.remove('focused', 'blurred'));
+        const m = document.getElementById(`mon-${id}`);
+        m.classList.add('focused');
+        if(hasStarted) {
+            document.querySelectorAll('.monitor').forEach(el => { if(el !== m) el.classList.add('blurred'); });
+            setTimeout(() => document.getElementById(`input-${id}`).focus(), 150);
+        }
+    }
 
     function requestStart(e) { e.stopPropagation(); db.update({ state: 'START' }); }
 
@@ -195,7 +209,7 @@
     }
 
     function gameLoop() {
-        let time = 1200; // 120초
+        let time = 1200;
         const timer = setInterval(() => {
             if(time > 0) {
                 time--;
@@ -220,10 +234,7 @@
                     db.update({ bonusWord: words[Math.floor(Math.random()*words.length)] });
                     setTimeout(() => db.update({ bonusWord: "" }), 5000);
                 }
-            } else {
-                clearInterval(timer);
-                endGame();
-            }
+            } else { clearInterval(timer); endGame(); }
         }, 100);
     }
 
@@ -239,15 +250,7 @@
         document.getElementById('result-screen').style.display = 'flex';
     }
 
-    function focusMon(id) {
-        document.querySelectorAll('.monitor').forEach(el => el.classList.remove('focused', 'blurred'));
-        const m = document.getElementById(`mon-${id}`);
-        m.classList.add('focused');
-        if(hasStarted && !isGameOver) {
-            document.querySelectorAll('.monitor').forEach(el => { if(el !== m) el.classList.add('blurred'); });
-            setTimeout(() => document.getElementById(`input-${id}`).focus(), 150);
-        }
-    }
+    function resetGame() { db.set({ state: 'WAITING', cards: {}, bonusWord: "" }); }
 
     window.addEventListener('keydown', (e) => { 
         if(e.key === 'Escape' && hasStarted && !isGameOver) {
