@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>타자 배틀 V58 - 라운드 시스템</title>
+    <title>타자 배틀 V61 - 가변 보너스 시스템</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
@@ -12,7 +12,7 @@
         
         /* 라운드 선택 로비 */
         #round-selector { position: fixed; inset: 0; background: var(--dark); z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .round-btn { width: 400px; padding: 30px; margin: 20px; font-size: 2rem; font-family: 'DungGeunMo'; cursor: pointer; border: 8px outset #eee; transition: 0.2s; }
+        .round-btn { width: 400px; padding: 30px; margin: 20px; font-size: 2rem; font-family: 'DungGeunMo'; cursor: pointer; border: 8px outset #eee; transition: 0.2s; border-radius: 10px; }
         .round-btn:hover { transform: scale(1.05); filter: brightness(1.2); }
         #btn-r1 { background: #00b894; color: white; }
         #btn-r2 { background: #6c5ce7; color: white; }
@@ -27,7 +27,7 @@
         #main-progress-bar { position: fixed; top: 65px; left: 0; height: 12px; background: #00b894; z-index: 850; width: 100%; transition: width 0.1s linear; }
 
         #room-view { display: none; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; width: 100vw; height: 100vh; gap: 15px; padding: 100px 15px 15px; box-sizing: border-box; }
-        .monitor { border: 10px solid var(--dark); display: flex; flex-direction: column; position: relative; background: #999; cursor: pointer; transition: background 0.2s; overflow: hidden; }
+        .monitor { border: 10px solid var(--dark); display: flex; flex-direction: column; position: relative; background: #999; cursor: pointer; transition: 0.2s; overflow: hidden; }
         .monitor.team-red { background: var(--red) !important; border-color: #b30000; }
         .monitor.team-blue { background: var(--blue) !important; border-color: #0000b3; }
         .monitor.focused { position: fixed !important; inset: 80px 20px 20px 20px; width: auto !important; height: auto !important; z-index: 1500; cursor: default; border-width: 15px; }
@@ -38,27 +38,27 @@
         .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.4s; transform-style: preserve-3d; }
         .is-flipped .card-inner { transform: rotateY(180deg); }
         
-        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border: 2px solid var(--dark); display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 8px; }
+        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border: 2px solid var(--dark); display: flex; align-items: center; justify-content: center; border-radius: 8px; }
         .card-front { background: white; color: #000; font-weight: bold; }
-        
-        /* 1라운드 텍스트 크기 / 2라운드 이모지 크기 자동 조절 */
-        .card-front.mode-text { font-size: 0.8rem; }
+        .card-front.mode-text { font-size: 0.85rem; }
         .card-front.mode-emoji { font-size: 2.5rem; }
 
         .card-back { transform: rotateY(180deg); color: white; font-size: 0.9rem; font-weight: bold; text-align: center; padding: 2px; }
-        .back-red { background: #d63031; border-color: #fff; }
-        .back-blue { background: #0984e3; border-color: #fff; }
+        .back-red { background: #d63031; }
+        .back-blue { background: #0984e3; }
 
         .swap-bar-container { width: 100%; height: 12px; background: rgba(255,255,255,0.3); border-bottom: 2px solid var(--dark); }
         .swap-bar-fill { height: 100%; width: 100%; background: var(--yellow); transition: width 0.1s linear; }
         .swap-warning { background: #ff4757; animation: blink 0.3s infinite; }
 
-        .input-box { width: 100%; padding: 20px; font-family: 'DungGeunMo'; font-size: 2.5rem; border: none; border-top: 6px solid var(--dark); text-align: center; outline: none; background: #fff; }
+        .input-box { width: 100%; padding: 20px; font-family: 'DungGeunMo'; font-size: 2.5rem; border: none; border-top: 6px solid var(--dark); text-align: center; outline: none; }
         .start-btn { display: none; padding: 25px 60px; font-size: 3rem; background: var(--yellow); border: 8px outset #fff; cursor: pointer; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2100; font-family: 'DungGeunMo'; }
         .focused .start-btn { display: block; }
         
-        #bonus-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); background: var(--gold); border: 10px solid var(--dark); padding: 40px; z-index: 2500; color: #000; text-align: center; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        /* 보너스 팝업 디자인 강화 */
+        #bonus-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); background: var(--gold); border: 10px solid var(--dark); padding: 40px; z-index: 2500; color: #000; text-align: center; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); min-width: 400px; }
         #bonus-popup.active { transform: translate(-50%, -50%) scale(1); }
+        #bonus-reward-badge { background: #000; color: var(--gold); padding: 5px 15px; border-radius: 20px; font-size: 1.5rem; margin-top: 10px; display: inline-block; }
 
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     </style>
@@ -66,29 +66,29 @@
 <body>
 
 <div id="round-selector">
-    <h1 style="font-size: 4rem; margin-bottom: 50px; color: var(--yellow);">🏫 도트 타자 학교 🏫</h1>
+    <h1 style="font-size: 4rem; margin-bottom: 50px; color: var(--yellow);">🏫 타자 학교 V61 🏫</h1>
     <button id="btn-r1" class="round-btn" onclick="selectRound(1)">1라운드: 텍스트 모드</button>
-    <button id="btn-r2" class="round-btn" onclick="selectRound(2)">2라운드: 이모지 퀴즈</button>
+    <button id="btn-r2" class="round-btn" onclick="selectRound(2)">2라운드: 이모지 모드</button>
 </div>
 
 <div id="countdown">3</div>
 <div id="result-screen">
     <div class="win-box">
-        <h1 id="winner-text" style="font-size: 4rem;">결과 계산 중...</h1>
+        <h1 id="winner-text" style="font-size: 4rem;">결과!</h1>
         <p id="final-score" style="font-size: 2rem;"></p>
         <button onclick="location.reload()" style="padding:15px 40px; font-family:'DungGeunMo'; cursor:pointer; font-size:1.5rem;">처음으로</button>
     </div>
 </div>
 
 <div id="bonus-popup">
-    <h2 id="bonus-title" style="margin:0; font-size: 2rem;">💥 골든 보너스! 💥</h2>
+    <h2 style="margin:0; font-size: 2rem;">💥 골든 보너스 💥</h2>
     <div id="bonus-word-display" style="font-size: 5rem; background:#fff; margin:20px 0; padding:15px; border:6px dashed #000;">단어</div>
-    <p>상대 카드 2장을 탈취하세요!</p>
+    <div id="bonus-reward-badge">💎 보상: ?장 탈취</div>
 </div>
 
 <div id="lobby-guide">
-    <h1 id="guide-title" style="font-size: 3.5rem;">준비 되셨나요?</h1>
-    <p id="guide-desc" style="font-size: 1.8rem;">모니터를 클릭하고 시작 버튼을 눌러주세요.</p>
+    <h1 id="guide-title" style="font-size: 3.5rem;">라운드 준비</h1>
+    <p id="guide-desc" style="font-size: 1.8rem;">모니터를 클릭하고 [시작]을 누르세요.</p>
 </div>
 
 <div id="top-bar">
@@ -104,12 +104,12 @@
         for(let i=1; i<=4; i++) {
             document.write(`
                 <div class="monitor" id="mon-${i}" onclick="focusMon(${i})">
-                    <button class="start-btn" onclick="requestStart(event)">🚀 시작!</button>
+                    <button class="start-btn" onclick="requestStart(event)">🚀 시작</button>
                     <div class="team-indicator" id="team-text-${i}">대기 중</div>
                     <div class="teacher-box" id="teach-${i}" style="color:#000; text-align:center; padding:5px; background:#fff; border-bottom:2px solid #000; font-size:1.2rem;">👨‍🏫 대기</div>
                     <div class="swap-bar-container"><div class="swap-bar-fill" id="swap-bar-${i}"></div></div>
                     <div class="board" id="board-${i}"></div>
-                    <input type="text" id="input-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="입력하세요!" disabled>
+                    <input type="text" id="input-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="입력하세요" disabled>
                 </div>
             `);
         }
@@ -133,25 +133,18 @@
     let currentRound = 1;
     const firebaseConfig = { databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database().ref('game_rounds_v58');
+    const db = firebase.database().ref('game_visual_v61');
 
     let monTeams = { 1: null, 2: null, 3: null, 4: null };
-    let hasStarted = false, isWatching = false, isCounting = false, isGameOver = false, activeBonus = "";
+    let hasStarted = false, isWatching = false, isCounting = false, isGameOver = false, activeBonus = "", bonusReward = 0;
 
-    function selectRound(r) {
+    async function selectRound(r) {
         currentRound = r;
+        await db.set({ state: 'WAITING', cards: {}, bonusWord: "", bonusReward: 0 });
         document.getElementById('round-selector').style.display = 'none';
         document.getElementById('room-view').style.display = 'grid';
         document.getElementById('lobby-guide').style.display = 'flex';
         document.getElementById('round-disp').innerText = `Round ${r}`;
-        
-        if(r === 1) {
-            document.getElementById('guide-title').innerText = "1라운드: 텍스트 모드";
-            document.getElementById('guide-desc').innerText = "보이는 글자를 빠르게 입력하세요!";
-        } else {
-            document.getElementById('guide-title').innerText = "2라운드: 이모지 퀴즈";
-            document.getElementById('guide-desc').innerText = "이미지를 보고 어떤 단어인지 맞춰보세요!";
-        }
         initBoard();
     }
 
@@ -164,11 +157,10 @@
                 c.className = 'card-container'; c.id = `card-${i}-${item.t}`;
                 const content = (currentRound === 1) ? item.t : item.i;
                 const modeClass = (currentRound === 1) ? 'mode-text' : 'mode-emoji';
-                c.innerHTML = `
-                    <div class="card-inner">
-                        <div class="card-front ${modeClass}">${content}</div>
-                        <div class="card-back" id="back-${i}-${item.t}">${item.t}</div>
-                    </div>`;
+                c.innerHTML = `<div class="card-inner">
+                    <div class="card-front ${modeClass}">${content}</div>
+                    <div class="card-back" id="back-${i}-${item.t}">${item.t}</div>
+                </div>`;
                 b.appendChild(c);
             });
         }
@@ -180,20 +172,22 @@
         if(d.state === 'WAITING' && hasStarted) location.reload();
         
         activeBonus = d.bonusWord || "";
-        document.getElementById('bonus-popup').classList.toggle('active', !!activeBonus);
-        if(activeBonus) document.getElementById('bonus-word-display').innerText = activeBonus;
+        bonusReward = d.bonusReward || 0;
+        
+        const popup = document.getElementById('bonus-popup');
+        popup.classList.toggle('active', !!activeBonus);
+        if(activeBonus) {
+            document.getElementById('bonus-word-display').innerText = activeBonus;
+            document.getElementById('bonus-reward-badge').innerText = `💎 보상: ${bonusReward}장 탈취`;
+        }
 
         wordSet.forEach(item => {
             const team = d.cards?.[item.t]?.team;
             for(let i=1; i<=4; i++){
                 const c = document.getElementById(`card-${i}-${item.t}`);
                 const b = document.getElementById(`back-${i}-${item.t}`);
-                if(team) { 
-                    c.classList.add('is-flipped'); 
-                    b.className = `card-back back-${team}`;
-                } else { 
-                    c.classList.remove('is-flipped'); 
-                }
+                if(c && team) { c.classList.add('is-flipped'); if(b) b.className = `card-back back-${team}`; }
+                else if(c) { c.classList.remove('is-flipped'); }
             }
         });
         document.getElementById('total-red').innerText = Object.values(d.cards||{}).filter(v=>v.team==='red').length;
@@ -228,11 +222,12 @@
         for(let i=1; i<=4; i++) {
             const m = document.getElementById(`mon-${i}`);
             const t = document.getElementById(`team-text-${i}`);
+            if(!m) continue;
             m.classList.remove('team-red', 'team-blue');
             if(monTeams[i]) {
                 m.classList.add(`team-${monTeams[i]}`);
                 t.innerText = monTeams[i].toUpperCase() + " TEAM";
-                t.style.color = monTeams[i] === 'red' ? "#ffcccc" : "#ccccff";
+                t.style.color = "#fff";
             }
         }
     }
@@ -242,8 +237,9 @@
             const val = e.target.value.trim();
             const myTeam = monTeams[id];
             if(activeBonus && val === activeBonus) {
-                db.update({ bonusWord: "" });
-                stealCards(myTeam, 2);
+                // 🚨 보너스 보상만큼 탈취
+                stealCards(myTeam, bonusReward);
+                db.update({ bonusWord: "", bonusReward: 0 });
             } else if(isWatching) {
                 applyPenalty(myTeam, 1);
             } else if(wordSet.some(w => w.t === val)) {
@@ -301,10 +297,17 @@
                     t.style.background = isWatching ? "#ff4757" : "#fff";
                     t.style.color = isWatching ? "#fff" : "#000";
                 }
-                if(time > 0 && time % 250 === 0) { // 25초 간격 보너스
-                    const randomWord = wordSet[Math.floor(Math.random()*wordSet.length)].t;
-                    db.update({ bonusWord: randomWord });
-                    setTimeout(() => db.update({ bonusWord: "" }), 5000);
+                
+                // 🚨 보너스 가변 보상 로직
+                if(time > 0 && time % 150 === 0) {
+                    const randomItem = wordSet[Math.floor(Math.random()*wordSet.length)];
+                    const len = randomItem.t.length;
+                    let reward = 2; // 기본 2장
+                    if(len === 4) reward = 3; // 4글자는 3장
+                    if(len >= 5) reward = 5;  // 5글자 이상은 5장
+                    
+                    db.update({ bonusWord: randomItem.t, bonusReward: reward });
+                    setTimeout(() => db.update({ bonusWord: "", bonusReward: 0 }), 5000);
                 }
             } else { clearInterval(timer); endGame(); }
         }, 100);
@@ -320,8 +323,6 @@
         document.getElementById('final-score').innerText = `RED: ${r} vs BLUE: ${b}`;
         document.getElementById('result-screen').style.display = 'flex';
     }
-
-    function resetGame() { db.set({ state: 'WAITING', cards: {}, bonusWord: "" }); }
 
     function focusMon(id) {
         if(isGameOver) return;
