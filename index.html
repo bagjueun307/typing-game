@@ -2,119 +2,132 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>타자 배틀 V76 - 최종 통합본</title>
+    <title>타자 배틀 V78 - 하우스 전광판 모드</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
-        :root { --red: #FF4757; --blue: #2E86DE; --yellow: #FECA57; --dark: #1E272E; --bg: #F1F2F6; --gold: #ffd700; }
+        :root { --red: #FF4757; --blue: #2E86DE; --yellow: #FECA57; --dark: #1E272E; --bg: #F1F2F6; }
         body { background: var(--bg); color: #fff; font-family: 'DungGeunMo', sans-serif; margin: 0; overflow: hidden; }
         
-        /* UI 레이아웃 */
-        #round-selector { position: fixed; inset: 0; background: var(--dark); z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .round-btn { width: 380px; padding: 22px; margin: 10px; font-size: 1.7rem; font-family: 'DungGeunMo'; cursor: pointer; border: 8px outset #eee; border-radius: 12px; }
+        /* [상단 및 상태바] */
+        #top-bar { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: #fff; border-bottom: 5px solid var(--dark); display: flex; justify-content: space-around; align-items: center; z-index: 2000; color: var(--dark); }
+        #status-area { position: fixed; top: 60px; left: 0; width: 100%; z-index: 1900; }
+        #shuffle-timer-container { height: 25px; background: #222; display: flex; align-items: center; position: relative; overflow: hidden; }
+        #shuffle-bar { height: 100%; background: var(--yellow); width: 100%; transition: width 0.1s linear; }
+        #shuffle-text { position: absolute; width: 100%; text-align: center; color: #000; font-weight: bold; font-size: 1rem; }
 
-        #top-bar { position: fixed; top: 0; left: 0; right: 0; height: 70px; background: #fff; border-bottom: 6px solid var(--dark); display: flex; justify-content: space-around; align-items: center; z-index: 900; color: var(--dark); }
-        #timer-disp { font-size: 2.2rem; color: #fff; background: var(--dark); padding: 5px 20px; border-radius: 5px; }
-        
-        #shuffle-timer-container { position: fixed; top: 70px; left: 0; width: 100%; height: 28px; background: #222; z-index: 850; border-bottom: 4px solid var(--dark); display: flex; align-items: center; overflow: hidden; }
-        #shuffle-bar { height: 100%; background: var(--yellow); width: 100%; transition: width 0.1s linear; position: relative; }
-        #shuffle-text { position: absolute; width: 100%; text-align: center; color: #000; font-weight: bold; font-size: 1.1rem; z-index: 860; pointer-events: none; }
-        .urgent-bar { background: #ff4757 !important; animation: blink 0.5s infinite; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        /* [메인 레이아웃] */
+        #main-container { display: flex; width: 100vw; height: 100vh; padding-top: 100px; box-sizing: border-box; transition: 0.5s; }
 
-        /* 모니터 및 보드 */
-        #room-view { display: none; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; width: 100vw; height: 100vh; gap: 15px; padding: 115px 15px 15px; box-sizing: border-box; }
-        .monitor { border: 10px solid var(--dark); display: flex; flex-direction: column; position: relative; background: #999; cursor: pointer; transition: 0.4s; overflow: hidden; }
-        .monitor.team-red { border-color: var(--red); }
-        .monitor.team-blue { border-color: var(--blue); }
-        .monitor.focused { position: fixed !important; inset: 110px 20px 20px 20px; z-index: 1500; border-width: 15px; }
+        /* [이모지 거실 공간] */
+        .lounge { 
+            width: 250px; background: #fff; border: 6px solid var(--dark); margin: 10px; 
+            display: flex; flex-wrap: wrap; align-content: flex-start; padding: 15px; 
+            overflow-y: auto; gap: 8px; cursor: zoom-in; transition: 0.5s; z-index: 1000;
+        }
+        /* 거실 전체보기 모드 (클릭 시) */
+        .lounge.expanded {
+            position: fixed; top: 85px; bottom: 15px; width: calc(50vw - 25px); 
+            z-index: 4000; cursor: zoom-out;
+        }
+        #red-lounge.expanded { left: 15px; }
+        #blue-lounge.expanded { right: 15px; }
 
-        .teacher-box { text-align: center; padding: 5px; background: #fff; color: #000; border-bottom: 2px solid #000; font-size: 1.1rem; font-weight: bold; }
-        .team-indicator { font-size: 1.3rem; font-weight: bold; text-align: center; padding: 5px; color: #fff; }
+        .lounge-title { width: 100%; text-align: center; font-size: 1.4rem; padding: 8px; color: #fff; border-radius: 5px; margin-bottom: 15px; }
+        .emoji-item { font-size: 2.5rem; animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 
-        .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; flex: 1; padding: 10px; pointer-events: none; }
-        .card-container { height: 50px; perspective: 600px; }
+        /* 중앙 전투 모니터 */
+        #room-view { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; padding: 10px; transition: 0.5s; }
+        .monitor { border: 6px solid var(--dark); display: flex; flex-direction: column; position: relative; background: #999; cursor: pointer; transition: 0.3s; }
+        .monitor.focused { position: fixed !important; inset: 100px 280px 20px 280px; z-index: 3500; border-width: 12px; }
+
+        .teacher-box { text-align: center; padding: 5px; background: #fff; color: #000; border-bottom: 2px solid #000; }
+        .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; flex: 1; padding: 10px; pointer-events: none; }
+        .card-container { height: 45px; perspective: 400px; }
         .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.4s; transform-style: preserve-3d; }
         .is-flipped .card-inner { transform: rotateY(180deg); }
-        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border: 2px solid var(--dark); display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
+        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border: 1px solid var(--dark); display: flex; align-items: center; justify-content: center; border-radius: 5px; font-size: 0.75rem; font-weight: bold; }
         .card-front { background: white; color: #000; }
         .card-back { transform: rotateY(180deg); color: white; }
         .back-red { background: var(--red); }
         .back-blue { background: var(--blue); }
 
-        .input-box { width: 100%; padding: 15px; font-family: 'DungGeunMo'; font-size: 2.2rem; border: none; border-top: 6px solid var(--dark); text-align: center; outline: none; }
-        
-        /* 보너스 팝업 */
-        #bonus-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); background: var(--gold); border: 8px solid var(--dark); padding: 30px; z-index: 2500; color: #000; text-align: center; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        #bonus-popup.active { transform: translate(-50%, -50%) scale(1); }
-        #bonus-word-display { font-size: 4rem; background: #fff; margin: 15px 0; padding: 10px; border: 4px dashed #000; }
+        .input-box { width: 100%; padding: 15px; font-family: 'DungGeunMo'; font-size: 2rem; border: none; border-top: 5px solid var(--dark); text-align: center; outline: none; }
 
-        .start-btn { display: none; padding: 20px 50px; font-size: 2.5rem; background: var(--yellow); border: 6px outset #fff; cursor: pointer; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3000; font-family: 'DungGeunMo'; }
-        .focused .start-btn { display: block; }
-        body.game-on .start-btn { display: none !important; }
-        #countdown { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 4000; display: none; align-items: center; justify-content: center; font-size: 10rem; color: var(--yellow); }
+        /* 기타 UI */
+        #round-selector { position: fixed; inset: 0; background: var(--dark); z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .round-btn { width: 350px; padding: 20px; margin: 10px; font-size: 1.5rem; cursor: pointer; border: 6px outset #eee; font-family:'DungGeunMo'; }
+        #bonus-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); background: var(--yellow); border: 8px solid var(--dark); padding: 30px; z-index: 4500; text-align: center; transition: 0.3s; color: #000; }
+        #bonus-popup.active { transform: translate(-50%, -50%) scale(1); }
+
+        @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
     </style>
 </head>
 <body>
 
 <div id="round-selector">
-    <h1 style="font-size: 3rem; color: var(--yellow); margin-bottom: 20px;">🏫 타자 배틀 V76: 최종 통합 🏫</h1>
+    <h1 style="color:var(--yellow); font-size: 3rem; margin-bottom: 20px;">🏫 하우스 전광판 모드 V78 🏫</h1>
     <button class="round-btn" style="background:#00b894; color:white;" onclick="selectRound(1)">1라운드: 기본 텍스트</button>
     <button class="round-btn" style="background:#6c5ce7; color:white;" onclick="selectRound(2)">2라운드: 이모지 퀴즈</button>
     <button class="round-btn" style="background:#ff4757; color:white;" onclick="selectRound(3)">3라운드: 하드 텍스트(3-5자)</button>
 </div>
 
 <div id="top-bar">
-    <div style="color:var(--red); font-size: 1.8rem;">RED: <span id="total-red">0</span></div>
-    <div id="timer-disp">60.0s</div>
-    <div style="color:var(--blue); font-size: 1.8rem;">BLUE: <span id="total-blue">0</span></div>
+    <div style="color:var(--red); font-size: 1.5rem; font-weight:bold;">RED HOUSE: <span id="total-red">0</span></div>
+    <div id="timer-disp" style="background:var(--dark); color:#fff; padding:5px 15px; border-radius:5px;">60.0s</div>
+    <div style="color:var(--blue); font-size: 1.5rem; font-weight:bold;">BLUE HOUSE: <span id="total-blue">0</span></div>
 </div>
 
-<div id="shuffle-timer-container">
-    <div id="shuffle-text">SHUFFLE: 10.0s</div>
-    <div id="shuffle-bar"></div>
+<div id="status-area">
+    <div id="shuffle-timer-container">
+        <div id="shuffle-text">SHUFFLE: 10.0s</div>
+        <div id="shuffle-bar"></div>
+    </div>
 </div>
 
-<div id="room-view">
-    <script>
-        for(let i=1; i<=4; i++) {
-            document.write(`
-                <div class="monitor" id="mon-${i}" onclick="focusMon(${i})">
-                    <button class="start-btn" id="start-btn-${i}" onclick="requestStart(event)">🚀 시작</button>
-                    <div class="teacher-box" id="teach-${i}">👨‍🏫 대기 중</div>
-                    <div class="team-indicator" id="team-tag-${i}">READY</div>
-                    <div class="board" id="board-${i}"></div>
-                    <input type="text" id="input-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="..." disabled>
-                </div>
-            `);
-        }
-    </script>
+<div id="main-container">
+    <div class="lounge" id="red-lounge" onclick="toggleLoungeView()">
+        <div class="lounge-title" style="background:var(--red)">RED HOME</div>
+    </div>
+
+    <div id="room-view">
+        <script>
+            for(let i=1; i<=4; i++) {
+                document.write(`
+                    <div class="monitor" id="mon-${i}" onclick="focusMon(${i})">
+                        <div class="teacher-box" id="teach-${i}">👨‍🏫 준비 중</div>
+                        <div class="board" id="board-${i}"></div>
+                        <input type="text" id="input-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="..." disabled>
+                        <button id="start-btn-${i}" onclick="requestStart(event)" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); padding:20px; font-size:2rem; cursor:pointer; font-family:'DungGeunMo'; z-index:10;">🚀 시작</button>
+                    </div>
+                `);
+            }
+        </script>
+    </div>
+
+    <div class="lounge" id="blue-lounge" onclick="toggleLoungeView()">
+        <div class="lounge-title" style="background:var(--blue)">BLUE HOME</div>
+    </div>
 </div>
 
 <div id="bonus-popup">
-    <h2 style="margin:0;">💥 골든 보너스 💥</h2>
-    <div id="bonus-word-display">단어</div>
-    <div id="bonus-reward-badge" style="font-size:1.2rem; font-weight:bold;">💎 보상: 카드 탈취!</div>
+    <h2>💥 골든 보너스 💥</h2>
+    <div id="bonus-word-display" style="font-size: 3.5rem; background:#fff; margin:10px; padding:10px; border:3px dashed #000;">단어</div>
+    <p>상대 팀 카드 3장을 뺏어옵니다!</p>
 </div>
-
-<div id="countdown">3</div>
 
 <script>
     const baseWords = [{t:"사과",i:"🍎"},{t:"포도",i:"🍇"},{t:"피자",i:"🍕"},{t:"축구",i:"⚽"},{t:"학교",i:"🏫"},{t:"연필",i:"✏️"},{t:"자동차",i:"🚗"},{t:"태양",i:"☀️"},{t:"구름",i:"☁️"},{t:"게임",i:"🎮"},{t:"시계",i:"⏰"},{t:"그림",i:"🎨"},{t:"나무",i:"🌳"},{t:"의자",i:"🪑"},{t:"노트",i:"📓"},{t:"기차",i:"🚂"},{t:"우산",i:"☂️"},{t:"안경",i:"👓"},{t:"노래",i:"🎤"},{t:"바다",i:"🌊"},{t:"소금",i:"🧂"},{t:"우유",i:"🥛"},{t:"라면",i:"🍜"},{t:"모자",i:"🧢"},{t:"장갑",i:"🧤"},{t:"오이",i:"🥒"},{t:"나비",i:"🦋"},{t:"고래",i:"🐳"},{t:"여우",i:"🦊"},{t:"풍선",i:"🎈"}];
     const hardWords = [{t:"컴퓨터",i:"💻"},{t:"텔레비전",i:"📺"},{t:"스마트폰",i:"📱"},{t:"떡볶이",i:"🥘"},{t:"햄버거",i:"🍔"},{t:"선생님",i:"👨‍🏫"},{t:"대한민국",i:"🇰🇷"},{t:"아이스크림",i:"🍦"},{t:"스케이트",i:"⛸️"},{t:"자전거",i:"🚲"},{t:"비행기",i:"✈️"},{t:"소방차",i:"🚒"},{t:"경찰차",i:"🚓"},{t:"무지개",i:"🌈"},{t:"코끼리",i:"🐘"},{t:"고구마",i:"🍠"},{t:"선글라스",i:"🕶️"},{t:"크리스마스",i:"🎄"},{t:"샌드위치",i:"🥪"},{t:"도서관",i:"📚"},{t:"오렌지",i:"🍊"},{t:"바나나",i:"🍌"},{t:"다람쥐",i:"🐿️"},{t:"지하실",i:"🏚️"},{t:"프라이팬",i:"🍳"},{t:"유치원",i:"📛"},{t:"머리카락",i:"💇"},{t:"체육관",i:"🏟️"},{t:"선풍기",i:"🎐"},{t:"냉장고",i:"🧊"}];
 
-    let wordSet = [];
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('game_visual_v76');
-
-    let currentRound = 1, monTeams = {}, hasStarted = false, isWatching = false, activeBonus = "";
+    let wordSet = [], monTeams = {}, hasStarted = false, isWatching = false, activeBonus = "";
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('game_v78');
 
     async function selectRound(r) {
-        currentRound = r;
         wordSet = (r === 3) ? hardWords : baseWords;
         await db.set({ state: 'WAITING', cards: {}, teams: {1:'red', 2:'blue', 3:'red', 4:'blue'}, bonusWord: "" });
         document.getElementById('round-selector').style.display = 'none';
-        document.getElementById('room-view').style.display = 'grid';
         initBoard();
     }
 
@@ -125,51 +138,87 @@
             wordSet.forEach(item => {
                 const c = document.createElement('div');
                 c.className = 'card-container'; c.id = `card-${i}-${item.t}`;
-                const content = (currentRound === 2) ? item.i : item.t;
+                const content = (item.i && item.t.length < 1) ? item.i : item.t; // 2라운드는 이모지
                 c.innerHTML = `<div class="card-inner"><div class="card-front">${content}</div><div class="card-back" id="back-${i}-${item.t}">${item.t}</div></div>`;
                 b.appendChild(c);
             });
+            document.getElementById(`start-btn-${i}`).style.display = 'block';
+        }
+    }
+
+    // 거실 확대/축소 토글 함수
+    function toggleLoungeView() {
+        const redL = document.getElementById('red-lounge');
+        const blueL = document.getElementById('blue-lounge');
+        const roomV = document.getElementById('room-view');
+        
+        const isExpanded = redL.classList.contains('expanded');
+        
+        if(isExpanded) {
+            redL.classList.remove('expanded');
+            blueL.classList.remove('expanded');
+            roomV.style.opacity = "1";
+        } else {
+            redL.classList.add('expanded');
+            blueL.classList.add('expanded');
+            roomV.style.opacity = "0.1"; // 중앙 모니터는 흐릿하게
         }
     }
 
     db.on('value', snap => {
         const d = snap.val(); if(!d) return;
         if(d.state === 'START' && !hasStarted) startCountDown();
-        if(d.teams) {
-            monTeams = d.teams;
-            for(let i=1; i<=4; i++){
-                const m = document.getElementById(`mon-${i}`), t = document.getElementById(`team-tag-${i}`);
-                m.className = `monitor team-${d.teams[i]} ${m.classList.contains('focused')?'focused':''}`;
-                t.innerText = d.teams[i].toUpperCase() + " TEAM";
-                t.style.background = d.teams[i] === 'red' ? '#FF4757' : '#2E86DE';
-            }
-        }
-        activeBonus = d.bonusWord || "";
-        document.getElementById('bonus-popup').classList.toggle('active', !!activeBonus);
-        if(activeBonus) document.getElementById('bonus-word-display').innerText = activeBonus;
+        if(d.teams) monTeams = d.teams;
 
+        const redEmojis = [], blueEmojis = [];
         wordSet.forEach(item => {
             const team = d.cards?.[item.t]?.team;
+            if(team === 'red') redEmojis.push(item.i);
+            if(team === 'blue') blueEmojis.push(item.i);
             for(let i=1; i<=4; i++){
                 const c = document.getElementById(`card-${i}-${item.t}`), b = document.getElementById(`back-${i}-${item.t}`);
                 if(c && team) { c.classList.add('is-flipped'); b.className = `card-back back-${team}`; }
                 else if(c) c.classList.remove('is-flipped');
             }
         });
-        document.getElementById('total-red').innerText = Object.values(d.cards||{}).filter(v=>v.team==='red').length;
-        document.getElementById('total-blue').innerText = Object.values(d.cards||{}).filter(v=>v.team==='blue').length;
+
+        updateLounge('red', redEmojis);
+        updateLounge('blue', blueEmojis);
+        document.getElementById('total-red').innerText = redEmojis.length;
+        document.getElementById('total-blue').innerText = blueEmojis.length;
+        
+        activeBonus = d.bonusWord || "";
+        document.getElementById('bonus-popup').classList.toggle('active', !!activeBonus);
+        if(activeBonus) document.getElementById('bonus-word-display').innerText = activeBonus;
+
+        for(let i=1; i<=4; i++){
+            const m = document.getElementById(`mon-${i}`);
+            m.className = `monitor team-${monTeams[i]} ${m.classList.contains('focused')?'focused':''}`;
+        }
     });
+
+    function updateLounge(team, emojis) {
+        const l = document.getElementById(`${team}-lounge`);
+        const title = l.querySelector('.lounge-title');
+        l.innerHTML = '';
+        l.appendChild(title);
+        emojis.forEach(e => {
+            const span = document.createElement('span');
+            span.className = 'emoji-item';
+            span.innerText = e;
+            l.appendChild(span);
+        });
+    }
 
     function requestStart(e) { e.stopPropagation(); db.update({ state: 'START' }); }
 
     function startCountDown() {
         hasStarted = true;
-        const cd = document.getElementById('countdown');
-        cd.style.display = 'flex';
+        document.querySelectorAll('[id^=start-btn]').forEach(b => b.style.display = 'none');
         let count = 3;
-        let itv = setInterval(() => {
-            if(count > 0) cd.innerText = count--;
-            else { clearInterval(itv); cd.style.display='none'; document.body.classList.add('game-on'); document.querySelectorAll('.input-box').forEach(i=>i.disabled=false); gameLoop(); }
+        const itv = setInterval(() => {
+            if(count > 0) count--;
+            else { clearInterval(itv); document.querySelectorAll('.input-box').forEach(i=>i.disabled=false); gameLoop(); }
         }, 1000);
     }
 
@@ -212,24 +261,21 @@
             if(time <= 0) return;
             time--;
             document.getElementById('timer-disp').innerText = (time/10).toFixed(1) + "s";
-            
             let sLeft = time % 100 || 100;
             const bar = document.getElementById('shuffle-bar'), txt = document.getElementById('shuffle-text');
             bar.style.width = (sLeft) + "%";
             txt.innerText = `SHUFFLE: ${(sLeft/10).toFixed(1)}s`;
             bar.className = sLeft <= 30 ? 'urgent-bar' : '';
 
-            // 선생님 감시 (20초 주기 중 3초 감시)
             let wPos = (600 - time) % 200;
             isWatching = (wPos >= 170);
             for(let i=1; i<=4; i++){
                 const t = document.getElementById(`teach-${i}`);
-                t.innerText = isWatching ? "🚨 감시 중! 🚨" : "👨‍🏫 칠판 보는 중";
+                t.innerText = isWatching ? "🚨 감시!" : "👨‍🏫 칠판";
                 t.style.background = isWatching ? "#ff4757" : "#fff";
                 t.style.color = isWatching ? "#fff" : "#000";
             }
 
-            // 보너스 단어 (15초마다)
             if(time > 0 && time % 150 === 0) {
                 const rand = wordSet[Math.floor(Math.random()*wordSet.length)].t;
                 db.update({ bonusWord: rand });
@@ -244,6 +290,9 @@
     }
 
     function focusMon(id) {
+        // 이미 확대된 거실이 있다면 닫기
+        if(document.getElementById('red-lounge').classList.contains('expanded')) toggleLoungeView();
+        
         document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
         document.getElementById(`mon-${id}`).classList.add('focused');
         if(hasStarted) setTimeout(() => document.getElementById(`input-${id}`).focus(), 100);
