@@ -2,104 +2,86 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>타자 배틀 V87 - 선생님의 눈광</title>
+    <title>타자 배틀 V88 - 대괴도: 세상 훔치기</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
-        :root { --red: #FF4757; --blue: #2E86DE; --yellow: #FECA57; --dark: #1E272E; --bg: #F1F2F6; --neon-red: #FF0000; }
+        :root { --red: #FF4757; --blue: #2E86DE; --yellow: #FECA57; --dark: #1E272E; --bg: #0F0F1B; --neon-red: #FF0000; }
         body { background: var(--bg); color: #fff; font-family: 'DungGeunMo', sans-serif; margin: 0; overflow: hidden; }
         
-        /* 상단 바 */
-        #top-bar { position: fixed; top: 0; left: 0; right: 0; height: 70px; background: #fff; border-bottom: 5px solid var(--dark); display: flex; justify-content: space-around; align-items: center; z-index: 6000; color: var(--dark); }
-        #timer-disp { font-size: 2rem; background: var(--dark); color: #fff; padding: 5px 15px; border-radius: 8px; min-width: 100px; text-align: center; }
+        /* 상단 바: 전리품 현황 */
+        #top-bar { position: fixed; top: 0; left: 0; right: 0; height: 70px; background: #222; border-bottom: 5px solid var(--yellow); display: flex; justify-content: space-around; align-items: center; z-index: 6000; }
+        #timer-disp { font-size: 2.2rem; color: var(--yellow); text-shadow: 0 0 10px var(--yellow); }
 
-        /* 상태 바 */
-        #status-area { position: fixed; top: 70px; left: 0; width: 100%; z-index: 4500; }
-        #shuffle-timer-container { height: 25px; background: #222; display: flex; align-items: center; position: relative; overflow: hidden; }
-        #shuffle-bar { height: 100%; background: var(--yellow); width: 100%; transition: width 0.1s linear; }
-        #shuffle-text { position: absolute; width: 100%; text-align: center; color: #000; font-weight: bold; font-size: 1rem; }
-
-        /* [핵심] 선생님 감시 구역 스타일링 */
-        .teacher-box { 
-            text-align: center; padding: 10px; background: #fff; color: #000; 
-            border-bottom: 3px solid #000; font-size: 1.2rem; transition: 0.2s; 
-        }
-        /* 감시 중일 때의 눈튀어나오는 스타일 */
+        /* 선생님 -> 감시자(보안 시스템) */
+        .teacher-box { text-align: center; padding: 10px; background: #333; color: #eee; border-bottom: 3px solid #000; font-size: 1.2rem; }
         .teacher-box.watching { 
-            background: #000 !important; 
-            color: var(--neon-red) !important; 
+            background: var(--neon-red) !important; 
+            color: #fff !important; 
             font-size: 1.8rem !important; 
-            font-weight: bold;
-            animation: eye-flash 0.5s infinite alternate;
-            box-shadow: inset 0 0 20px var(--neon-red);
+            animation: alert-flash 0.3s infinite alternate;
         }
+        @keyframes alert-flash { from { opacity: 1; } to { opacity: 0.6; } }
 
-        @keyframes eye-flash {
-            from { transform: scale(1); text-shadow: 0 0 5px var(--neon-red); }
-            to { transform: scale(1.1); text-shadow: 0 0 20px var(--neon-red), 0 0 30px #fff; }
-        }
+        /* 라운드 선택: 작전명 */
+        #round-selector { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .round-btn { width: 400px; padding: 18px; margin: 8px; font-size: 1.4rem; cursor: pointer; border: 4px solid var(--yellow); background: transparent; color: var(--yellow); font-family:'DungGeunMo'; border-radius: 10px; }
+        .round-btn:hover { background: var(--yellow); color: #000; }
 
-        /* 나머지 UI 생략 방지용 핵심 스타일 */
-        #round-selector { position: fixed; inset: 0; background: var(--dark); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .round-btn { width: 380px; padding: 18px; margin: 8px; font-size: 1.4rem; cursor: pointer; border: 6px outset #eee; font-family:'DungGeunMo'; border-radius: 10px; color: white; }
-        #lounge-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 5500; display: none; grid-template-columns: 1fr 1fr; gap: 15px; padding: 100px 20px 20px 20px; box-sizing: border-box; }
-        .lounge-display { border: 10px solid var(--dark); border-radius: 20px; display: flex; flex-wrap: wrap; align-content: flex-start; padding: 30px; overflow-y: auto; gap: 15px; }
-        #main-container { position: relative; width: 100vw; height: 100vh; padding-top: 105px; box-sizing: border-box; }
-        #room-view { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; width: 100%; height: 100%; padding: 15px; box-sizing: border-box; }
-        .monitor { border: 8px solid var(--dark); display: flex; flex-direction: column; position: relative; background: #999; cursor: pointer; border-radius: 10px; overflow: hidden; }
-        .monitor.focused { z-index: 3500; position: fixed !important; inset: 120px 30px 30px 30px; }
-        .monitor.team-red.focused { border: 15px solid var(--red) !important; }
-        .monitor.team-blue.focused { border: 15px solid var(--blue) !important; }
-        .start-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-        .start-btn { padding: 25px 50px; font-size: 2.5rem; background: var(--yellow); border: 8px outset #fff; cursor: pointer; border-radius: 15px; font-family: 'DungGeunMo'; }
-        #countdown-layer { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9000; display: none; align-items: center; justify-content: center; font-size: 15rem; color: var(--yellow); pointer-events: none; }
-        .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; flex: 1; padding: 10px; background: #eee; }
+        /* 비밀 창고(거실) */
+        #lounge-overlay { position: fixed; inset: 0; background: #000; z-index: 5500; display: none; grid-template-columns: 1fr 1fr; gap: 20px; padding: 100px 30px 30px 30px; box-sizing: border-box; }
+        .lounge-display { border: 5px dashed var(--yellow); border-radius: 20px; display: flex; flex-wrap: wrap; align-content: flex-start; padding: 30px; gap: 15px; }
+        .lounge-label { width: 100%; font-size: 2rem; text-align: center; color: var(--yellow); margin-bottom: 20px; border-bottom: 2px solid var(--yellow); padding-bottom: 10px; }
+
+        /* 전투 화면 */
+        #room-view { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; padding: 15px; height: 100vh; box-sizing: border-box; padding-top: 105px; }
+        .monitor { border: 5px solid #444; background: #1a1a1a; display: flex; flex-direction: column; border-radius: 15px; overflow: hidden; position: relative; }
+        .monitor.focused { z-index: 3500; position: fixed !important; inset: 120px 30px 30px 30px; border-color: var(--yellow); box-shadow: 0 0 50px rgba(254, 202, 87, 0.5); }
+
+        .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; flex: 1; padding: 10px; background: #111; }
         .card-container { height: 45px; perspective: 500px; }
-        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.4s; transform-style: preserve-3d; }
+        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
         .is-flipped .card-inner { transform: rotateY(180deg); }
-        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border: 2px solid var(--dark); display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 6px; font-weight: bold; }
-        .card-front { background: white; color: #000; font-size: 0.7rem; }
-        .card-back { transform: rotateY(180deg); color: white; font-size: 0.8rem; }
-        .back-red { background: var(--red); }
-        .back-blue { background: var(--blue); }
-        .input-wrapper { display: flex; align-items: stretch; height: 70px; background: var(--dark); border-top: 5px solid var(--dark); }
-        .team-label { padding: 0 15px; display: flex; align-items: center; font-size: 1.2rem; font-weight: bold; color: #fff; min-width: 80px; justify-content: center; }
-        .bg-red-label { background: var(--red); }
-        .bg-blue-label { background: var(--blue); }
-        .input-box { flex: 1; padding: 0 15px; font-family: 'DungGeunMo'; font-size: 2rem; border: none; text-align: center; outline: none; }
+        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border: 1px solid #333; display: flex; align-items: center; justify-content: center; border-radius: 5px; font-size: 0.7rem; }
+        .card-front { background: #222; color: #666; } /* 아직 안 훔친 물건: 희미함 */
+        .card-back { transform: rotateY(180deg); color: white; font-weight: bold; border: 2px solid #fff; }
+        .back-red { background: linear-gradient(45deg, var(--red), #b33939); box-shadow: 0 0 10px var(--red); }
+        .back-blue { background: linear-gradient(45deg, var(--blue), #227093); box-shadow: 0 0 10px var(--blue); }
+
+        .input-wrapper { display: flex; height: 60px; background: #000; border-top: 3px solid var(--yellow); }
+        .input-box { flex: 1; background: transparent; color: var(--yellow); border: none; font-family: 'DungGeunMo'; font-size: 1.8rem; text-align: center; outline: none; }
+        .input-box::placeholder { color: #444; font-size: 1rem; }
+
+        .start-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        .start-btn { padding: 20px 40px; font-size: 2rem; background: transparent; color: var(--yellow); border: 3px solid var(--yellow); cursor: pointer; font-family: 'DungGeunMo'; }
+        #countdown-layer { position: fixed; inset: 0; background: #000; z-index: 9000; display: none; align-items: center; justify-content: center; font-size: 12rem; color: var(--yellow); }
     </style>
 </head>
 <body>
 
-<div id="countdown-layer">3</div>
+<div id="countdown-layer">침투 개시...</div>
 
 <div id="round-selector">
-    <h1 style="color:var(--yellow); font-size: 3.5rem; margin-bottom: 20px;">🏫 타자 배틀 V87 🏫</h1>
-    <button class="round-btn" style="background:#00b894;" onclick="selectRound(1)">1R: 기본 모드</button>
-    <button class="round-btn" style="background:#6c5ce7;" onclick="selectRound(2)">2R: 이모지 퀴즈</button>
-    <button class="round-btn" style="background:#ff4757;" onclick="selectRound(3)">3R: 하드 모드</button>
-    <button class="round-btn" style="background:#f39c12;" onclick="selectRound(4)">🔥 특별R: 무한 뺏기전</button>
+    <h1 style="color:var(--yellow); font-size: 3rem; margin-bottom: 20px; letter-spacing: 5px;">[ WORLD STEALER ]</h1>
+    <p style="color:#888; margin-bottom: 30px;">세상의 단어를 입력해 당신의 창고로 전송하십시오.</p>
+    <button class="round-btn" onclick="selectRound(1)">작전 1: 일상 용품 탈취</button>
+    <button class="round-btn" onclick="selectRound(2)">작전 2: 이모지 코드 해킹</button>
+    <button class="round-btn" onclick="selectRound(3)">작전 3: 국가 기밀 보안(하드)</button>
+    <button class="round-btn" onclick="selectRound(4)" style="border-style: double; font-weight: bold;">🔥 무한 쟁탈전: 전리품 뺏기</button>
 </div>
 
 <div id="top-bar">
-    <div style="color:var(--red); font-size: 1.5rem; font-weight:bold;">RED: <span id="total-red">0</span></div>
-    <button style="padding:10px 20px; font-family:'DungGeunMo'; cursor:pointer; background:var(--yellow); border:3px solid #000;" onclick="toggleLounge()">🏠 거실 전광판</button>
-    <div id="timer-disp">60.0s</div>
-    <div style="color:var(--blue); font-size: 1.5rem; font-weight:bold;">BLUE: <span id="total-blue">0</span></div>
-</div>
-
-<div id="status-area">
-    <div id="shuffle-timer-container">
-        <div id="shuffle-text">SHUFFLE: 10.0s</div>
-        <div id="shuffle-bar"></div>
-    </div>
+    <div style="color:var(--red);">RED 창고: <span id="total-red">0</span></div>
+    <button style="background:none; border:1px solid var(--yellow); color:var(--yellow); padding:5px 15px; cursor:pointer; font-family:'DungGeunMo';" onclick="toggleLounge()">💎 창고 확인</button>
+    <div id="timer-disp">작전 시간: 60.0</div>
+    <div style="color:var(--blue);">BLUE 창고: <span id="total-blue">0</span></div>
 </div>
 
 <div id="main-container">
     <div id="lounge-overlay">
-        <div class="lounge-display" id="red-lounge-view" style="background:#fff5f5; border-color:var(--red)"><div class="lounge-label" style="background:var(--red)">RED HOUSE</div></div>
-        <div class="lounge-display" id="blue-lounge-view" style="background:#f0f7ff; border-color:var(--blue)"><div class="lounge-label" style="background:var(--blue)">BLUE HOUSE</div></div>
+        <div class="lounge-display" id="red-lounge-view"><div class="lounge-label">RED SECRET VAULT</div></div>
+        <div class="lounge-display" id="blue-lounge-view"><div class="lounge-label">BLUE SECRET VAULT</div></div>
     </div>
     
     <div id="room-view">
@@ -108,15 +90,13 @@
                 document.write(`
                     <div class="monitor" id="mon-${i}" onclick="focusMon(${i})">
                         <div id="overlay-${i}" class="start-overlay">
-                            <h2 style="color:white; margin-bottom:15px;">MONITOR ${i}</h2>
-                            <button class="start-btn" onclick="requestStart(event)">🚀 게임 시작</button>
+                            <h2 style="color:var(--yellow); margin-bottom:15px;">AGENT ${i}</h2>
+                            <button class="start-btn" onclick="requestStart(event)">🕵️ 침투 시작</button>
                         </div>
-                        <div class="teacher-box" id="teach-${i}">👨‍🏫 대기 중</div>
+                        <div class="teacher-box" id="teach-${i}">📡 보안 시스템 우회 중...</div>
                         <div class="board" id="board-${i}"></div>
                         <div class="input-wrapper">
-                            <div id="team-label-l-${i}" class="team-label">TEAM</div>
-                            <input type="text" id="input-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="시작 버튼을 누르세요" disabled>
-                            <div id="team-label-r-${i}" class="team-label">TEAM</div>
+                            <input type="text" id="input-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="물건 이름을 입력해 훔치세요..." disabled>
                         </div>
                     </div>
                 `);
@@ -132,7 +112,7 @@
     ];
 
     let wordSet = [], monTeams = {}, hasStarted = false, isWatching = false, loungeMode = false, currentRound = 1;
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('game_v87');
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('game_v88');
 
     async function selectRound(r) {
         currentRound = r;
@@ -147,7 +127,7 @@
             const b = document.getElementById(`board-${i}`); b.innerHTML = "";
             wordSet.forEach(item => {
                 const c = document.createElement('div'); c.className = 'card-container'; c.id = `card-${i}-${item.t}`;
-                c.innerHTML = `<div class="card-inner"><div class="card-front"><span>${item.i}</span><br>${item.t}</div><div class="card-back" id="back-${i}-${item.t}">${item.t}</div></div>`;
+                c.innerHTML = `<div class="card-inner"><div class="card-front"><span>${item.i}</span></div><div class="card-back" id="back-${i}-${item.t}">${item.t}</div></div>`;
                 b.appendChild(c);
             });
         }
@@ -164,10 +144,7 @@
             for(let i=1; i<=4; i++) {
                 const team = d.teams[i];
                 const m = document.getElementById(`mon-${i}`);
-                const l = document.getElementById(`team-label-l-${i}`), r = document.getElementById(`team-label-r-${i}`);
                 m.className = `monitor team-${team} ${m.classList.contains('focused')?'focused':''}`;
-                l.innerText = team.toUpperCase(); r.innerText = team.toUpperCase();
-                l.className = `team-label bg-${team}-label`; r.className = `team-label bg-${team}-label`;
             }
         }
         let redEmojis = [], blueEmojis = [];
@@ -190,7 +167,7 @@
     function updateLoungeUI(team, emojis) {
         const l = document.getElementById(`${team}-lounge-view`), label = l.querySelector('.lounge-label');
         l.innerHTML = ''; l.appendChild(label);
-        emojis.forEach(e => { const span = document.createElement('span'); span.style.fontSize='4rem'; span.innerText = e; l.appendChild(span); });
+        emojis.forEach(e => { const span = document.createElement('span'); span.style.fontSize='4.5rem'; span.innerText = e; l.appendChild(span); });
     }
 
     function toggleLounge() {
@@ -204,18 +181,16 @@
         document.getElementById(`mon-${id}`).classList.add('focused');
     }
 
-    function requestStart(e) {
-        e.stopPropagation();
-        db.update({ state: 'START' });
-    }
+    function requestStart(e) { e.stopPropagation(); db.update({ state: 'START' }); }
 
     function startCountDown() {
         hasStarted = true;
         const layer = document.getElementById('countdown-layer');
         layer.style.display = 'flex';
         let count = 3;
+        const messages = ["장비 점검...", "보안 무력화 중...", "침투 1초 전!", "지금입니다!"];
         const itv = setInterval(() => {
-            layer.innerText = count === 0 ? "START!" : count;
+            layer.innerText = count >= 0 ? messages[3-count] : "";
             if(count < 0) {
                 clearInterval(itv);
                 layer.style.display = 'none';
@@ -253,27 +228,17 @@
         let time = 600;
         setInterval(() => {
             if(time <= 0) return; time--;
-            document.getElementById('timer-disp').innerText = (time/10).toFixed(1) + "s";
-            let sLeft = time % 100 || 100;
-            document.getElementById('shuffle-bar').style.width = sLeft + "%";
-            document.getElementById('shuffle-text').innerText = `SHUFFLE: ${(sLeft/10).toFixed(1)}s`;
-            
-            // 선생님 감시 상태 계산
+            document.getElementById('timer-disp').innerText = "침투 시간: " + (time/10).toFixed(1);
             isWatching = ((600-time)%200 >= 170);
             for(let i=1; i<=4; i++){
                 const t = document.getElementById(`teach-${i}`);
                 if(isWatching) {
-                    t.innerText = "👀 감시 중!! 🚨";
+                    t.innerText = "🚨 경보 발령!! 멈추십시오! 🚨";
                     t.classList.add('watching');
                 } else {
-                    t.innerText = "👨‍🏫 선생님 필기 중...";
+                    t.innerText = "📡 보안 시스템 우회 중... (안전)";
                     t.classList.remove('watching');
                 }
-            }
-
-            if(time % 100 === 0 && time > 0) {
-                const teams = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
-                db.update({ teams: {1:teams[0], 2:teams[1], 3:teams[2], 4:teams[3]} });
             }
         }, 100);
     }
