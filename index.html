@@ -2,12 +2,12 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>타자 배틀 V53 - 팀 교체 타이머 바</title>
+    <title>타자 배틀 V54 - 보너스 복구 & 1분 승부</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
-        :root { --red: #FF0000; --blue: #0000FF; --yellow: #feca57; --dark: #2f3542; --bg: #f1f2f6; }
+        :root { --red: #FF0000; --blue: #0000FF; --yellow: #feca57; --dark: #2f3542; --bg: #f1f2f6; --gold: #ffd700; }
         body { background: var(--bg); color: #fff; font-family: 'DungGeunMo', sans-serif; margin: 0; overflow: hidden; }
         
         #lobby-guide { position: fixed; inset: 0; background: rgba(255,255,255,0.7); z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #000; pointer-events: none; }
@@ -28,7 +28,6 @@
         .monitor.team-blue { background: var(--blue) !important; }
         .monitor.focused { position: fixed !important; inset: 80px 30px 30px 30px; width: auto !important; height: auto !important; z-index: 1500; cursor: default; }
 
-        /* 🚨 팀 교체 타이머 바 스타일 */
         .swap-bar-container { width: 100%; height: 10px; background: rgba(0,0,0,0.3); }
         .swap-bar-fill { height: 100%; width: 100%; background: var(--yellow); transition: width 0.1s linear; }
         .swap-warning { background: #ff4757; animation: blink 0.3s infinite; }
@@ -45,6 +44,11 @@
         .card-back { transform: rotateY(180deg); color: white; }
         .back-red { background: #d63031; }
         .back-blue { background: #0984e3; }
+
+        /* 🚨 보너스 팝업 스타일 */
+        #bonus-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); background: var(--gold); border: 8px solid var(--dark); padding: 25px; z-index: 2500; color: #000; text-align: center; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #bonus-popup.active { transform: translate(-50%, -50%) scale(1); }
+        .bonus-word { font-size: 4rem; display: block; margin-top: 10px; background: #fff; padding: 10px 20px; border: 4px dashed #000; }
 
         .input-box { width: 100%; padding: 15px; font-family: 'DungGeunMo'; font-size: 2rem; border: none; border-top: 6px solid var(--dark); text-align: center; outline: none; pointer-events: auto; }
         .blurred { filter: blur(15px); opacity: 0.3; pointer-events: none; }
@@ -64,14 +68,19 @@
     </div>
 </div>
 
+<div id="bonus-popup">
+    <h2 style="margin:0;">✨ 골든 찬스: 상대 카드 2개 탈취! ✨</h2>
+    <span id="bonus-word-txt" class="bonus-word">단어</span>
+</div>
+
 <div id="lobby-guide">
-    <h1 style="color:#d63031; font-size: 3rem;">🏫 도트 타자 학교 V53 🏫</h1>
-    <div style="font-size: 1.8rem;">모니터를 클릭해 확대하고 [시작]을 누르세요!<br>노란색 바가 다 줄어들면 팀이 바뀝니다!</div>
+    <h1 style="color:#d63031; font-size: 3rem;">🏫 도트 타자 학교 V54 🏫</h1>
+    <div style="font-size: 1.8rem;">1분의 진검승부! 보너스 단어로 역전하세요!</div>
 </div>
 
 <div id="top-bar">
     <div style="color:var(--red); font-size: 1.8rem; font-weight: bold;">RED: <span id="total-red">0</span></div>
-    <div id="timer-disp">120.0s</div>
+    <div id="timer-disp">60.0s</div>
     <div style="color:var(--blue); font-size: 1.8rem; font-weight: bold;">BLUE: <span id="total-blue">0</span></div>
 </div>
 <div id="main-progress-bar"></div>
@@ -83,9 +92,7 @@
                 <div class="monitor" id="mon-${i}" onclick="focusMon(${i})">
                     <button class="start-btn" onclick="requestStart(event)">🚀 게임 시작!</button>
                     <div class="teacher-box" id="teach-${i}">👨‍🏫 대기</div>
-                    <div class="swap-bar-container">
-                        <div class="swap-bar-fill" id="swap-bar-${i}"></div>
-                    </div>
+                    <div class="swap-bar-container"><div class="swap-bar-fill" id="swap-bar-${i}"></div></div>
                     <div class="board" id="board-${i}"></div>
                     <input type="text" id="input-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="단어 입력" disabled>
                 </div>
@@ -97,11 +104,11 @@
 <script>
     const firebaseConfig = { databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database().ref('game_v53');
+    const db = firebase.database().ref('game_v54');
 
     const words = ["떡볶이", "급식", "운동장", "방학", "알림장", "짝꿍", "준비물", "실내화", "딱지", "슬러시", "피카츄", "학원", "숙제", "체육", "소풍", "쉬는시간", "지우개", "필통", "리코더", "반장", "일기", "독서", "피구", "태권도", "문방구", "교실", "매점", "칠판", "분필", "정문", "교가", "현장학습", "개학", "교장실", "과학실", "음악실", "복도", "실내화가방", "받아쓰기", "방과후"];
     let monTeams = { 1: null, 2: null, 3: null, 4: null };
-    let hasStarted = false, isWatching = false, isCounting = false, isGameOver = false;
+    let hasStarted = false, isWatching = false, isCounting = false, isGameOver = false, activeBonus = "";
 
     // 보드 생성
     for(let i=1; i<=4; i++){
@@ -117,8 +124,13 @@
     db.on('value', snap => {
         const d = snap.val(); if(!d) return;
         if(d.state === 'START' && !hasStarted && !isCounting) startCountDown();
-        if(d.state === 'WAITING' && hasStarted) { location.reload(); }
+        if(d.state === 'WAITING' && hasStarted) location.reload();
         
+        activeBonus = d.bonusWord || "";
+        const popup = document.getElementById('bonus-popup');
+        popup.classList.toggle('active', !!activeBonus);
+        if(activeBonus) document.getElementById('bonus-word-txt').innerText = activeBonus;
+
         words.forEach(w => {
             const team = d.cards?.[w]?.team;
             for(let i=1; i<=4; i++){
@@ -168,12 +180,32 @@
     function handleInput(e, id) {
         if(e.key === 'Enter' && !isGameOver && monTeams[id]) {
             const val = e.target.value.trim();
-            if(isWatching) { applyPenalty(monTeams[id], 1); }
+            const myTeam = monTeams[id];
+            
+            // 🚨 보너스 단어 체크 (상대 카드 2개 탈취)
+            if(activeBonus && val === activeBonus) {
+                db.update({ bonusWord: "" });
+                stealCards(myTeam, 2);
+            } 
+            else if(isWatching) { applyPenalty(myTeam, 1); }
             else if(words.includes(val)) {
-                db.child('cards').child(val).set({ team: monTeams[id], t: Date.now() });
+                db.child('cards').child(val).set({ team: myTeam, t: Date.now() });
             }
             e.target.value = '';
         }
+    }
+
+    // 🚨 카드 탈취 로직: 상대 팀 카드 중 가장 최근 것을 내 팀으로 변경
+    function stealCards(myTeam, count) {
+        const enemyTeam = (myTeam === 'red' ? 'blue' : 'red');
+        db.child('cards').once('value', snap => {
+            const cards = snap.val(); if(!cards) return;
+            let targets = Object.keys(cards).filter(k => cards[k].team === enemyTeam);
+            targets.sort((a,b) => cards[b].t - cards[a].t);
+            for(let i=0; i<count && i<targets.length; i++) {
+                db.child('cards').child(targets[i]).update({ team: myTeam, t: Date.now() });
+            }
+        });
     }
 
     function applyPenalty(team, count) {
@@ -186,20 +218,19 @@
     }
 
     function gameLoop() {
-        let time = 1200; // 120초
+        let time = 600; // 🚨 60초(1분)
         const timer = setInterval(() => {
             if(time > 0) {
                 time--;
                 document.getElementById('timer-disp').innerText = (time/10).toFixed(1) + "s";
-                document.getElementById('main-progress-bar').style.width = (time / 1200 * 100) + "%";
+                document.getElementById('main-progress-bar').style.width = (time / 600 * 100) + "%";
                 
-                // 🚨 팀 교체 바(10초 주기) 계산
-                const cyclePos = (1200 - time) % 100; // 0 ~ 99
+                const cyclePos = (600 - time) % 100;
                 const swapPercent = 100 - cyclePos;
                 for(let i=1; i<=4; i++) {
                     const bar = document.getElementById(`swap-bar-${i}`);
                     bar.style.width = swapPercent + "%";
-                    if(swapPercent <= 20) bar.classList.add('swap-warning'); // 2초 남으면 경고
+                    if(swapPercent <= 20) bar.classList.add('swap-warning');
                     else bar.classList.remove('swap-warning');
                 }
 
@@ -208,13 +239,21 @@
                     updateMonitorColors();
                 }
 
-                const watchCycle = (1200 - time) % 200;
+                const watchCycle = (600 - time) % 200;
                 isWatching = (watchCycle >= 180);
                 for(let i=1; i<=4; i++){
                     const t = document.getElementById(`teach-${i}`);
                     if(isWatching){ t.innerText="🚨!!감시 중!!🚨"; t.className="teacher-box watching"; }
                     else { t.innerText="👨‍🏫 (칠판 보는 중)"; t.className="teacher-box"; }
                 }
+
+                // 🚨 보너스 문제 발생 (300틱 = 30초, 250틱 = 25초 마다)
+                if((600-time) % 250 === 0 && (600-time) !== 0) {
+                    const randomWord = words[Math.floor(Math.random() * words.length)];
+                    db.update({ bonusWord: randomWord });
+                    setTimeout(() => db.update({ bonusWord: "" }), 6000); // 6초간 노출
+                }
+
             } else { clearInterval(timer); endGame(); }
         }, 100);
     }
