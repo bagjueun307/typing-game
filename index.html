@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>타자 배틀 V67 - 초성 영토 점령전</title>
+    <title>타자 배틀 V68 - 실전 초성 점령전</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
@@ -14,26 +14,24 @@
         .round-btn { width: 450px; padding: 25px; margin: 10px; font-size: 1.8rem; font-family: 'DungGeunMo'; cursor: pointer; border: 8px outset #eee; transition: 0.2s; border-radius: 10px; color: white; }
         .round-btn:hover { transform: scale(1.05); filter: brightness(1.2); }
 
-        #countdown { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 4000; display: none; align-items: center; justify-content: center; font-size: 10rem; color: var(--yellow); }
-        #result-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 4500; display: none; flex-direction: column; align-items: center; justify-content: center; }
-        .win-box { background: white; padding: 40px; border: 10px double var(--dark); color: #000; text-align: center; }
+        #countdown { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 4000; display: none; align-items: center; justify-content: center; font-size: 10rem; color: var(--yellow); pointer-events: none; }
+        #result-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 4500; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .win-box { background: white; padding: 40px; border: 10px double var(--dark); color: #000; }
 
         #top-bar { position: fixed; top: 0; left: 0; right: 0; height: 65px; background: #fff; border-bottom: 6px solid var(--dark); display: flex; justify-content: space-around; align-items: center; z-index: 900; color: var(--dark); }
         #timer-disp { font-size: 2.2rem; color: #ff4757; background: var(--dark); padding: 5px 15px; border-radius: 5px; }
 
         #room-view { display: none; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; width: 100vw; height: 100vh; gap: 15px; padding: 100px 15px 15px; box-sizing: border-box; }
-        .monitor { border: 10px solid var(--dark); display: flex; flex-direction: column; position: relative; background: #999; transition: 0.2s; overflow: hidden; }
-        .monitor.focused { position: fixed !important; inset: 80px 20px 20px 20px; z-index: 1500; border-width: 15px; }
+        .monitor { border: 10px solid var(--dark); display: flex; flex-direction: column; position: relative; background: #999; transition: 0.2s; overflow: hidden; cursor: pointer; }
+        .monitor.focused { position: fixed !important; inset: 80px 20px 20px 20px; z-index: 1500; border-width: 15px; cursor: default; }
 
         .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; flex: 1; padding: 15px; pointer-events: none; }
         .cell { height: 60px; border: 2px solid rgba(0,0,0,0.1); background: #eee; border-radius: 6px; transition: 0.3s; position: relative; }
-        .cell.red { background: var(--red); border-color: #b30000; box-shadow: inset 0 0 10px rgba(0,0,0,0.2); }
-        .cell.blue { background: var(--blue); border-color: #0000b3; box-shadow: inset 0 0 10px rgba(0,0,0,0.2); }
+        .cell.red { background: var(--red); border-color: #b30000; }
+        .cell.blue { background: var(--blue); border-color: #0000b3; }
         
-        /* 1,2라운드용 텍스트 */
         .cell-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #000; font-weight: bold; }
-        .cell.red .cell-text, .cell.blue .cell-text { color: #fff; }
-        body.round-3-active .cell-text { display: none; } /* 3라운드는 글자 안보임 */
+        body.round-3-active .cell-text { display: none; } 
 
         .chosung-panel { display: none; background: #000; color: #00ff00; font-size: 4rem; text-align: center; padding: 15px; border-top: 6px solid var(--dark); letter-spacing: 15px; text-shadow: 0 0 15px #00ff00; }
         body.round-3-active .chosung-panel { display: block; }
@@ -47,10 +45,10 @@
 <body id="main-body">
 
 <div id="round-selector">
-    <h1 style="font-size: 4rem; margin-bottom: 40px; color: var(--yellow);">🏫 타자 학교 V67 🏫</h1>
+    <h1 style="font-size: 3.5rem; margin-bottom: 40px; color: var(--yellow);">🏫 타자 학교 V68 🏫</h1>
     <button class="round-btn" style="background:#00b894;" onclick="selectRound(1)">1라운드: 텍스트 모드</button>
     <button class="round-btn" style="background:#6c5ce7;" onclick="selectRound(2)">2라운드: 이모지 모드</button>
-    <button class="round-btn" style="background:#e67e22;" onclick="selectRound(3)">3라운드: 초성 점령전 (10초)</button>
+    <button class="round-btn" style="background:#e67e22;" onclick="selectRound(3)">3라운드: 2글자 초성 배틀</button>
 </div>
 
 <div id="countdown">3</div>
@@ -64,9 +62,9 @@
 
 <div id="top-bar">
     <div id="round-disp" style="background:var(--dark); color:white; padding:5px 15px; border-radius:5px; font-size:1.5rem;">Round 1</div>
-    <div style="color:var(--red); font-size: 2rem; font-weight:bold;">RED: <span id="total-red">0</span></div>
+    <div style="color:var(--red); font-size: 1.8rem; font-weight:bold;">RED: <span id="total-red">0</span></div>
     <div id="timer-disp">60.0s</div>
-    <div style="color:var(--blue); font-size: 2rem; font-weight:bold;">BLUE: <span id="total-blue">0</span></div>
+    <div style="color:var(--blue); font-size: 1.8rem; font-weight:bold;">BLUE: <span id="total-blue">0</span></div>
 </div>
 
 <div id="room-view">
@@ -74,11 +72,11 @@
         for(let i=1; i<=4; i++) {
             document.write(`
                 <div class="monitor" id="mon-${i}" onclick="focusMon(${i})">
-                    <button class="start-btn" id="start-btn-${i}" onclick="requestStart(event)">🚀 시작</button>
+                    <button class="start-btn" onclick="requestStart(event)">🚀 시작</button>
                     <div class="teacher-box" id="teach-${i}" style="color:#000; text-align:center; padding:5px; background:#fff; border-bottom:2px solid #000;">👨‍🏫 대기</div>
                     <div class="board" id="board-${i}"></div>
                     <div class="chosung-panel" id="chosung-box-${i}">??</div>
-                    <input type="text" id="input-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="준비!" disabled>
+                    <input type="text" id="input-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="입력!" disabled>
                 </div>
             `);
         }
@@ -86,9 +84,10 @@
 </div>
 
 <script>
-    // 초성 추출용 샘플 데이터 (글자수 2~4자 골고루)
-    const samples = ["사과", "포도", "학교", "기차", "수영", "바다", "태양", "축구", "노트", "연필", "떡볶이", "자동차", "컴퓨터", "선생님", "무지개", "눈사람", "경찰차", "텔레비전", "스마트폰"];
-    
+    // 2글자 단어 사전 (실제 존재하는 단어 위주)
+    const dictionary2 = ["사과", "포도", "축구", "농구", "야구", "수영", "학교", "책상", "연필", "노트", "사자", "토끼", "기차", "태양", "구름", "시계", "안경", "우산", "노래", "그림", "영화", "바다", "하늘", "우주", "커피", "의자", "가방", "장갑", "양말", "나무", "나비", "가지", "오이", "우유", "치즈", "미소", "행복", "사랑", "친구", "가족"];
+    const allWords = [...dictionary2, "떡볶이", "햄버거", "선생님", "강아지", "고양이", "코끼리", "비행기", "자동차", "경찰차", "소방차", "무지개", "컴퓨터", "게임", "카메라", "눈사람"];
+
     function getChosung(str) {
         const cho = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
         let result = "";
@@ -102,13 +101,13 @@
 
     let currentRound = 1;
     let currentChosung = "";
-    let usedWords = new Set();
+    let usedWordsInTurn = new Set(); 
     const firebaseConfig = { databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database().ref('game_visual_v67');
+    const db = firebase.database().ref('game_visual_v68');
 
     let monTeams = { 1: null, 2: null, 3: null, 4: null };
-    let hasStarted = false, isWatching = false, isGameOver = false;
+    let hasStarted = false, isGameOver = false;
 
     async function selectRound(r) {
         currentRound = r;
@@ -124,13 +123,11 @@
         for(let i=1; i<=4; i++){
             const b = document.getElementById(`board-${i}`);
             b.innerHTML = "";
-            for(let j=0; j<40; j++) { // 40개의 점령 칸
+            for(let j=0; j<40; j++) {
                 const c = document.createElement('div');
-                c.className = 'cell'; 
-                c.id = `cell-${i}-${j}`;
-                // 1,2 라운드라면 글자를 넣어줌 (샘플용)
+                c.className = 'cell'; c.id = `cell-${i}-${j}`;
                 if(currentRound < 3) {
-                    const word = samples[j % samples.length];
+                    const word = allWords[j % allWords.length];
                     c.setAttribute('data-word', word);
                     c.innerHTML = `<div class="cell-text">${word}</div>`;
                 }
@@ -145,7 +142,7 @@
         
         if(currentChosung !== d.globalChosung) {
             currentChosung = d.globalChosung || "";
-            usedWords.clear();
+            usedWordsInTurn.clear();
         }
 
         for(let i=1; i<=4; i++) {
@@ -153,24 +150,20 @@
             if(cb) cb.innerText = currentChosung || "??";
         }
 
-        // 전체 카드(칸) 상태 업데이트
         const cards = d.cards || {};
         for(let i=1; i<=4; i++) {
             for(let j=0; j<40; j++) {
                 const cell = document.getElementById(`cell-${i}-${j}`);
-                const status = cards[j]; // 0~39번 칸의 상태
+                const status = cards[j];
                 cell.classList.remove('red', 'blue');
                 if(status) cell.classList.add(status.team);
             }
         }
         
-        let redCount = 0, blueCount = 0;
-        Object.values(cards).forEach(v => {
-            if(v.team === 'red') redCount++;
-            if(v.team === 'blue') blueCount++;
-        });
-        document.getElementById('total-red').innerText = redCount;
-        document.getElementById('total-blue').innerText = blueCount;
+        let rCnt = 0, bCnt = 0;
+        Object.values(cards).forEach(v => { if(v.team === 'red') rCnt++; if(v.team === 'blue') bCnt++; });
+        document.getElementById('total-red').innerText = rCnt;
+        document.getElementById('total-blue').innerText = bCnt;
     });
 
     function requestStart(e) { e.stopPropagation(); db.update({ state: 'START' }); }
@@ -189,9 +182,17 @@
                 hasStarted = true;
                 document.body.classList.add('game-on');
                 document.querySelectorAll('.input-box').forEach(i => i.disabled = false);
+                
+                // 🚨 즉시 첫 초성 생성
+                if(currentRound === 3) generateNewChosung();
                 gameLoop();
             }
         }, 1000);
+    }
+
+    function generateNewChosung() {
+        const rand = dictionary2[Math.floor(Math.random()*dictionary2.length)];
+        db.update({ globalChosung: getChosung(rand) });
     }
 
     function handleInput(e, id) {
@@ -200,22 +201,19 @@
             const myTeam = monTeams[id];
 
             if(currentRound === 3) {
-                if(getChosung(val) === currentChosung && val.length === currentChosung.length) {
-                    if(!usedWords.has(val)) {
-                        usedWords.add(val);
+                // 1. 초성 일치  2. 2글자  3. 실제 단어 사전에 존재  4. 중복 아님
+                if(getChosung(val) === currentChosung && val.length === 2 && dictionary2.includes(val)) {
+                    if(!usedWordsInTurn.has(val)) {
+                        usedWordsInTurn.add(val);
                         occupyCell(myTeam);
                     }
                 }
             } else {
-                if(isWatching) { /* 페널티 로직 추가 가능 */ }
-                else {
-                    // 1,2라운드: 단어가 일치하는 칸 찾기
-                    for(let j=0; j<40; j++) {
-                        const cell = document.getElementById(`cell-${id}-${j}`);
-                        if(cell.getAttribute('data-word') === val) {
-                            db.child('cards').child(j).set({ team: myTeam });
-                            break;
-                        }
+                for(let j=0; j<40; j++) {
+                    const cell = document.getElementById(`cell-${id}-${j}`);
+                    if(cell.getAttribute('data-word') === val) {
+                        db.child('cards').child(j).set({ team: myTeam });
+                        break;
                     }
                 }
             }
@@ -227,22 +225,16 @@
         const enemy = myTeam === 'red' ? 'blue' : 'red';
         db.child('cards').once('value', snap => {
             const cards = snap.val() || {};
-            let targets = [];
-            // 1순위: 상대방 칸 뺏기, 2순위: 빈 칸 차지하기
-            let enemyCells = [];
-            let emptyCells = [];
+            let enemyCells = [], emptyCells = [];
             for(let i=0; i<40; i++) {
                 if(cards[i]?.team === enemy) enemyCells.push(i);
                 else if(!cards[i]) emptyCells.push(i);
             }
+            let target;
+            if(enemyCells.length > 0) target = enemyCells[Math.floor(Math.random()*enemyCells.length)];
+            else if(emptyCells.length > 0) target = emptyCells[Math.floor(Math.random()*emptyCells.length)];
             
-            let finalTarget;
-            if(enemyCells.length > 0) finalTarget = enemyCells[Math.floor(Math.random()*enemyCells.length)];
-            else if(emptyCells.length > 0) finalTarget = emptyCells[Math.floor(Math.random()*emptyCells.length)];
-            
-            if(finalTarget !== undefined) {
-                db.child('cards').child(finalTarget).set({ team: myTeam });
-            }
+            if(target !== undefined) db.child('cards').child(target).set({ team: myTeam });
         });
     }
 
@@ -253,21 +245,13 @@
                 time--;
                 document.getElementById('timer-disp').innerText = (time/10).toFixed(1) + "s";
                 
-                if(currentRound === 3 && time % 100 === 0) {
-                    const rand = samples[Math.floor(Math.random()*samples.length)];
-                    db.update({ globalChosung: getChosung(rand) });
+                // 10초마다 초성 갱신
+                if(currentRound === 3 && time > 0 && time % 100 === 0) {
+                    generateNewChosung();
                 }
 
-                if(currentRound !== 3) {
-                    const watchPos = (600 - time) % 200;
-                    isWatching = (watchPos >= 170);
-                    for(let i=1; i<=4; i++) {
-                        const t = document.getElementById(`teach-${i}`);
-                        t.innerText = isWatching ? "🚨 감시 중!" : "👨‍🏫 보는 중";
-                        t.style.background = isWatching ? "#ff4757" : "#fff";
-                    }
-                } else {
-                    for(let i=1; i<=4; i++) document.getElementById(`teach-${i}`).innerText = "🔥 초성 점령전! 🔥";
+                if(currentRound === 3) {
+                    for(let i=1; i<=4; i++) document.getElementById(`teach-${i}`).innerText = "🔥 2글자 단어 입력! 🔥";
                 }
             } else { clearInterval(timer); endGame(); }
         }, 100);
