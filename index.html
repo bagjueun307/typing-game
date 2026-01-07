@@ -2,113 +2,114 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>WORLD STEALER V91 - 마스터 시프</title>
+    <title>WORLD STEALER V92 - 복구 완료</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
-        :root { --red: #FF4757; --blue: #2E86DE; --yellow: #FECA57; --dark: #0F0F1B; --neon-red: #FF0000; }
+        :root { --red: #FF4757; --blue: #2E86DE; --yellow: #FECA57; --dark: #0A0A0F; --neon-red: #FF0000; }
         body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', sans-serif; margin: 0; overflow: hidden; }
         
-        /* 전리품 상단 바 */
-        #top-bar { position: fixed; top: 0; left: 0; right: 0; height: 75px; background: #1a1a1a; border-bottom: 4px solid var(--yellow); display: flex; justify-content: space-around; align-items: center; z-index: 6000; box-shadow: 0 5px 20px rgba(0,0,0,0.8); }
-        .score-box { font-size: 1.5rem; letter-spacing: 2px; }
+        /* 상단 바 */
+        #top-bar { position: fixed; top: 0; left: 0; right: 0; height: 75px; background: #15151A; border-bottom: 4px solid var(--yellow); display: flex; justify-content: space-around; align-items: center; z-index: 6000; }
+        #timer-disp { font-size: 2.2rem; color: var(--yellow); min-width: 150px; text-align: center; }
 
-        /* 요원 태그 */
-        .agent-tag { 
-            position: absolute; top: -50px; left: 50%; transform: translateX(-50%);
-            padding: 8px 30px; border-radius: 12px 12px 0 0; font-size: 1.3rem; font-weight: bold;
-            display: none; text-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
-        .focused .agent-tag { display: block; }
-        .tag-red { background: var(--red); box-shadow: 0 -4px 15px var(--red); }
-        .tag-blue { background: var(--blue); box-shadow: 0 -4px 15px var(--blue); }
+        /* 비밀 창고 (결과 레이어) */
+        #vault-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 7000; display: none; grid-template-columns: 1fr 1fr; gap: 20px; padding: 100px 40px 40px 40px; }
+        .vault-room { border: 5px dashed #444; border-radius: 20px; display: flex; flex-wrap: wrap; align-content: flex-start; padding: 30px; gap: 15px; overflow-y: auto; }
+        .vault-label { width: 100%; font-size: 2rem; text-align: center; padding: 10px; margin-bottom: 20px; border-radius: 10px; }
 
-        /* 보안 모니터 */
-        #room-view { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 20px; padding: 120px 20px 20px 20px; height: 100vh; box-sizing: border-box; }
-        .monitor { border: 4px solid #333; background: #050505; display: flex; flex-direction: column; border-radius: 15px; position: relative; overflow: hidden; }
-        .monitor.focused.team-red { border: 8px solid var(--red); }
-        .monitor.focused.team-blue { border: 8px solid var(--blue); }
+        /* 모니터 배치 */
+        #room-view { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 20px; padding: 110px 20px 20px 20px; height: 100vh; box-sizing: border-box; }
+        .monitor { border: 5px solid #333; background: #000; display: flex; flex-direction: column; border-radius: 15px; position: relative; cursor: pointer; transition: 0.3s; }
+        
+        /* [중요] 모니터 확대 포커스 */
+        .monitor.focused { position: fixed !important; inset: 120px 30px 30px 30px; z-index: 5000; }
+        .monitor.focused.team-red { border: 12px solid var(--red); box-shadow: 0 0 50px var(--red); }
+        .monitor.focused.team-blue { border: 12px solid var(--blue); box-shadow: 0 0 50px var(--blue); }
 
-        /* 보안 알림판 */
-        .security-status { text-align: center; padding: 12px; background: #222; color: #888; border-bottom: 2px solid #000; font-size: 1rem; transition: 0.3s; }
-        .security-status.alert { background: var(--neon-red) !important; color: white !important; font-weight: bold; animation: pulse 0.4s infinite; }
-        @keyframes pulse { from { opacity: 1; } to { opacity: 0.7; } }
+        /* 침투 시작 오버레이 */
+        .start-guard { position: absolute; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .start-btn { padding: 20px 50px; font-size: 2rem; background: var(--yellow); border: none; cursor: pointer; border-radius: 10px; font-family: 'DungGeunMo'; }
 
-        /* 아이템 그리드 */
-        .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; flex: 1; padding: 15px; background: #000; }
-        .card-container { height: 55px; perspective: 600px; }
-        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; }
+        /* 보안 상태창 */
+        .security-bar { text-align: center; padding: 10px; background: #222; font-size: 1.1rem; border-bottom: 2px solid #000; }
+        .security-bar.alert { background: var(--neon-red) !important; color: white; animation: flash 0.4s infinite; }
+        @keyframes flash { from { opacity: 1; } to { opacity: 0.5; } }
+
+        /* 아이템 카드 */
+        .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; flex: 1; padding: 15px; background: #050505; }
+        .card-container { height: 50px; perspective: 600px; }
+        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
         .is-flipped .card-inner { transform: rotateY(180deg); }
-        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.8rem; }
-        .card-front { background: #151515; color: #555; border: 1px solid #222; }
+        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+        .card-front { background: #1A1A1A; color: #666; border: 1px solid #333; text-align: center; }
         .card-back { transform: rotateY(180deg); color: white; font-weight: bold; border: 2px solid #fff; }
-        .back-red { background: linear-gradient(135deg, var(--red), #800); }
-        .back-blue { background: linear-gradient(135deg, var(--blue), #004); }
+        .back-red { background: var(--red); }
+        .back-blue { background: var(--blue); }
 
-        /* 입력 툴킷 */
-        .input-area { display: flex; height: 70px; background: #111; border-top: 3px solid var(--yellow); }
-        .input-field { flex: 1; background: transparent; color: var(--yellow); border: none; font-family: 'DungGeunMo'; font-size: 2rem; text-align: center; outline: none; }
-        .monitor.focused.team-red .input-area { background: #300; }
-        .monitor.focused.team-blue .input-area { background: #003; }
+        .input-wrap { display: flex; height: 65px; background: #000; border-top: 3px solid var(--yellow); }
+        .input-box { flex: 1; background: transparent; color: #fff; border: none; font-size: 2rem; text-align: center; outline: none; font-family: 'DungGeunMo'; }
 
-        /* 초기 작전 선택 */
-        #mission-control { position: fixed; inset: 0; background: #000; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .mission-btn { width: 450px; padding: 22px; margin: 12px; font-size: 1.5rem; cursor: pointer; border: 3px solid var(--yellow); background: transparent; color: var(--yellow); font-family:'DungGeunMo'; border-radius: 8px; }
-        .mission-btn:hover { background: var(--yellow); color: #000; }
+        #round-selector { position: fixed; inset: 0; background: #000; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .round-btn { width: 450px; padding: 20px; margin: 10px; font-size: 1.5rem; cursor: pointer; border: 3px solid var(--yellow); background: transparent; color: var(--yellow); font-family:'DungGeunMo'; border-radius: 10px; }
     </style>
 </head>
 <body>
 
-<div id="mission-control">
-    <h1 style="color:var(--yellow); font-size: 4rem; margin-bottom: 10px;">[ MASTER THIEF ]</h1>
-    <p style="color:#666; margin-bottom: 40px; letter-spacing: 3px;">세상의 모든 가치를 당신의 금고로.</p>
-    <button class="mission-btn" onclick="selectMission(1)">PROT-1: 일상 탈취 (2~3글자)</button>
-    <button class="mission-btn" onclick="selectMission(2)">PROT-2: 코드 해석 (이모지 퀴즈)</button>
-    <button class="mission-btn" onclick="selectMission(3)">PROT-3: 보안 돌파 (3~5글자)</button>
-    <button class="mission-btn" onclick="selectMission(4)" style="border-style: double; font-weight: bold;">PROT-∞: 무한 쟁탈 (상대 물건 탈취)</button>
+<div id="round-selector">
+    <h1 style="color:var(--yellow); font-size: 3.5rem; margin-bottom: 30px;">[ WORLD STEALER ]</h1>
+    <button class="round-btn" onclick="selectRound(1)">1R: 일상 물건 (텍스트+이모지)</button>
+    <button class="round-btn" onclick="selectRound(2)">2R: 암호 해킹 (이모지 퀴즈)</button>
+    <button class="round-btn" onclick="selectRound(3)">3R: 기밀 보안 (긴 단어)</button>
+    <button class="round-btn" onclick="selectRound(4)">🔥 무한 쟁탈전 (전리품 뺏기)</button>
+</div>
+
+<div id="vault-overlay">
+    <div class="vault-room" id="red-vault"><div class="vault-label" style="background:var(--red)">RED VAULT</div></div>
+    <div class="vault-room" id="blue-vault"><div class="vault-label" style="background:var(--blue)">BLUE VAULT</div></div>
+    <button onclick="toggleVault()" style="position:fixed; top:20px; right:20px; padding:10px 30px; background:var(--yellow); cursor:pointer; font-family:'DungGeunMo';">창고 닫기</button>
 </div>
 
 <div id="top-bar">
-    <div class="score-box" style="color:var(--red);">RED VAULT: <span id="total-red">0</span></div>
-    <div id="timer-disp" style="font-size: 2.2rem; color: var(--yellow); text-shadow: 0 0 10px var(--yellow);">침투 대기 중</div>
-    <div class="score-box" style="color:var(--blue);">BLUE VAULT: <span id="total-blue">0</span></div>
+    <div style="color:var(--red); font-size: 1.5rem;">RED: <span id="score-red">0</span></div>
+    <button onclick="toggleVault()" style="padding:10px 20px; background:none; border:2px solid var(--yellow); color:var(--yellow); cursor:pointer; font-family:'DungGeunMo';">💎 창고 확인</button>
+    <div id="timer-disp">60.0s</div>
+    <div style="color:var(--blue); font-size: 1.5rem;">BLUE: <span id="score-blue">0</span></div>
 </div>
 
-<div id="main-container">
-    <div id="room-view">
-        <script>
-            for(let i=1; i<=4; i++) {
-                document.write(`
-                    <div class="monitor" id="mon-${i}" onclick="focusAgent(${i})">
-                        <div class="agent-tag" id="tag-${i}">요원 식별 중...</div>
-                        <div id="ov-${i}" style="position:absolute; inset:0; background:rgba(0,0,0,0.9); z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-                            <button style="padding:15px 40px; font-size:1.8rem; background:var(--yellow); cursor:pointer; font-family:'DungGeunMo';" onclick="startSignal(event)">🕵️ 침투 시작</button>
-                        </div>
-                        <div class="security-status" id="sec-${i}">📡 보안 시스템 우회 중...</div>
-                        <div class="board" id="board-${i}"></div>
-                        <div class="input-area">
-                            <input type="text" id="in-${i}" class="input-field" onkeydown="handleInput(event, ${i})" placeholder="클릭하여 포커스" disabled>
-                        </div>
+<div id="room-view">
+    <script>
+        for(let i=1; i<=4; i++) {
+            document.write(`
+                <div class="monitor" id="mon-${i}" onclick="focusMon(${i})">
+                    <div id="guard-${i}" class="start-guard">
+                        <h2 style="color:var(--yellow); margin-bottom:20px;">요원 선택 대기 중...</h2>
+                        <button class="start-btn" onclick="reqStart(event)">🚀 침투 개시</button>
                     </div>
-                `);
-            }
-        </script>
-    </div>
+                    <div class="security-bar" id="sec-${i}">📡 보안 시스템 우회 중...</div>
+                    <div class="board" id="board-${i}"></div>
+                    <div class="input-wrap">
+                        <input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="모니터 클릭 후 시작" disabled>
+                    </div>
+                </div>
+            `);
+        }
+    </script>
 </div>
 
 <script>
-    const pool1 = [{t:"사과",i:"🍎"},{t:"피자",i:"🍕"},{t:"연필",i:"✏️"},{t:"기차",i:"🚂"},{t:"포도",i:"🍇"},{t:"나무",i:"🌳"},{t:"의자",i:"🪑"},{t:"노트",i:"📓"},{t:"축구",i:"⚽"},{t:"노래",i:"🎤"},{t:"바다",i:"🌊"},{t:"우유",i:"🥛"},{t:"모자",i:"🧢"},{t:"구름",i:"☁️"},{t:"나비",i:"🦋"},{t:"우산",i:"☂️"},{t:"라면",i:"🍜"},{t:"안경",i:"👓"},{t:"게임",i:"🎮"},{t:"풍선",i:"🎈"},{t:"시계",i:"⏰"},{t:"여우",i:"🦊"},{t:"고래",i:"🐳"},{t:"소금",i:"🧂"},{t:"오이",i:"🥒"},{t:"장갑",i:"🧤"},{t:"태양",i:"☀️"},{t:"학교",i:"🏫"},{t:"그림",i:"🎨"},{t:"버스",i:"🚌"}];
-    const pool3 = [{t:"스마트폰",i:"📱"},{t:"노트북",i:"💻"},{t:"텔레비전",i:"📺"},{t:"대한민국",i:"🇰🇷"},{t:"아이스크림",i:"🍦"},{t:"샌드위치",i:"🥪"},{t:"자동차",i:"🚗"},{t:"선글라스",i:"🕶️"},{t:"햄버거",i:"🍔"},{t:"다람쥐",i:"🐿️"},{t:"도서관",i:"📚"},{t:"선풍기",i:"🎐"},{t:"냉장고",i:"🧊"},{t:"지하실",i:"🏚️"},{t:"비행기",i:"✈️"},{t:"고구마",i:"🍠"},{t:"무지개",i:"🌈"},{t:"운동장",i:"🏟️"},{t:"소방차",i:"🚒"},{t:"편의점",i:"🏪"},{t:"경찰차",i:"🚓"},{t:"머리카락",i:"💇"},{t:"스케이트",i:"⛸️"},{t:"자전거",i:"🚲"},{t:"유치원",i:"📛"},{t:"선생님",i:"👨‍🏫"},{t:"프라이팬",i:"🍳"},{t:"컴퓨터",i:"💻"},{t:"체육관",i:"🏟️"},{t:"지하철",i:"🚇"}];
+    const p1 = [{t:"사과",i:"🍎"},{t:"피자",i:"🍕"},{t:"기차",i:"🚂"},{t:"포도",i:"🍇"},{t:"나무",i:"🌳"},{t:"의자",i:"🪑"},{t:"노트",i:"📓"},{t:"축구",i:"⚽"},{t:"바다",i:"🌊"},{t:"우유",i:"🥛"},{t:"모자",i:"🧢"},{t:"구름",i:"☁️"},{t:"나비",i:"🦋"},{t:"우산",i:"☂️"},{t:"라면",i:"🍜"},{t:"게임",i:"🎮"},{t:"풍선",i:"🎈"},{t:"시계",i:"⏰"},{t:"여우",i:"🦊"},{t:"고래",i:"🐳"},{t:"소금",i:"🧂"},{t:"오이",i:"🥒"},{t:"장갑",i:"🧤"},{t:"태양",i:"☀️"},{t:"학교",i:"🏫"},{t:"버스",i:"🚌"},{t:"연필",i:"✏️"},{t:"침대",i:"🛏️"},{t:"전화",i:"📞"},{t:"가방",i:"🎒"}];
+    const p3 = [{t:"스마트폰",i:"📱"},{t:"노트북",i:"💻"},{t:"대한민국",i:"🇰🇷"},{t:"아이스크림",i:"🍦"},{t:"샌드위치",i:"🥪"},{t:"자동차",i:"🚗"},{t:"다람쥐",i:"🐿️"},{t:"선풍기",i:"🎐"},{t:"냉장고",i:"🧊"},{t:"비행기",i:"✈️"},{t:"무지개",i:"🌈"},{t:"운동장",i:"🏟️"},{t:"소방차",i:"🚒"},{t:"경찰차",i:"🚓"},{t:"머리카락",i:"💇"},{t:"자전거",i:"🚲"},{t:"컴퓨터",i:"💻"},{t:"지하철",i:"🚇"},{t:"도서관",i:"📚"},{t:"미술관",i:"🎨"},{t:"백화점",i:"🏬"},{t:"선글라스",i:"🕶️"},{t:"프라이팬",i:"🍳"},{t:"텔레비전",i:"📺"},{t:"크리스마스",i:"🎄"},{t:"에어컨",i:"❄️"},{t:"청소기",i:"🧹"},{t:"카메라",i:"📷"},{t:"바나나",i:"🍌"},{t:"선생님",i:"👨‍🏫"}];
 
     let wordSet = [], monTeams = {}, active = false, isAlert = false, mission = 1;
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('stealer_v91');
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('vault_v92');
 
-    async function selectMission(m) {
-        mission = m;
-        wordSet = (m === 3) ? pool3 : pool1;
-        await db.set({ state: 'READY', cards: {}, teams: {1:'red', 2:'blue', 3:'red', 4:'blue'} });
-        document.getElementById('mission-control').style.display = 'none';
+    async function selectRound(r) {
+        mission = r;
+        wordSet = (r === 3) ? p3 : p1;
+        await db.set({ state: 'WAITING', cards: {}, teams: {1:'red', 2:'blue', 3:'red', 4:'blue'} });
+        document.getElementById('round-selector').style.display = 'none';
         initBoard();
     }
 
@@ -117,58 +118,55 @@
             const b = document.getElementById(`board-${i}`); b.innerHTML = "";
             wordSet.forEach(item => {
                 const c = document.createElement('div'); c.className = 'card-container'; c.id = `c-${i}-${item.t}`;
-                let content = (mission === 2) ? `<span style="font-size:2rem">${item.i}</span>` : `<span>${item.i}</span><br>${item.t}`;
+                let content = (mission === 2) ? `<span style="font-size:1.8rem">${item.i}</span>` : `<span>${item.i}</span><br>${item.t}`;
                 c.innerHTML = `<div class="card-inner"><div class="card-front">${content}</div><div class="card-back" id="bk-${i}-${item.t}">${item.t}</div></div>`;
                 b.appendChild(c);
             });
         }
     }
 
-    function focusAgent(id) {
+    function focusMon(id) {
         if(active) return;
         document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
-        const m = document.getElementById(`mon-${id}`); m.classList.add('focused');
-        const team = monTeams[id];
-        const tag = document.getElementById(`tag-${id}`);
-        tag.innerText = `[${team.toUpperCase()}] GRADE 요원`;
-        tag.className = `agent-tag tag-${team}`;
+        document.getElementById(`mon-${id}`).classList.add('focused');
+    }
+
+    function toggleVault() {
+        const v = document.getElementById('vault-overlay');
+        v.style.display = (v.style.display === 'grid') ? 'none' : 'grid';
     }
 
     db.on('value', snap => {
         const d = snap.val(); if(!d) return;
-        if(d.state === 'GO' && !active) {
-            document.querySelectorAll('[id^="ov-"]').forEach(ov => ov.style.display = 'none');
-            startCount();
+        if(d.state === 'START' && !active) {
+            document.querySelectorAll('.start-guard').forEach(g => g.style.display = 'none');
+            active = true; gameTimer();
         }
         if(d.teams) monTeams = d.teams;
+        let rList = [], bList = [];
         if(d.cards) {
             Object.keys(d.cards).forEach(word => {
                 const team = d.cards[word].team;
+                const emoji = wordSet.find(w => w.t === word)?.i || '📦';
+                team === 'red' ? rList.push(emoji) : bList.push(emoji);
                 for(let i=1; i<=4; i++){
                     const c = document.getElementById(`c-${i}-${word}`), b = document.getElementById(`bk-${i}-${word}`);
                     if(c) { c.classList.add('is-flipped'); if(b) b.className = `card-back back-${team}`; }
                 }
             });
-            document.getElementById('total-red').innerText = Object.values(d.cards).filter(c=>c.team==='red').length;
-            document.getElementById('total-blue').innerText = Object.values(d.cards).filter(c=>c.team==='blue').length;
         }
+        document.getElementById('score-red').innerText = rList.length;
+        document.getElementById('score-blue').innerText = bList.length;
+        updateVaultUI('red', rList); updateVaultUI('blue', bList);
     });
 
-    function startSignal(e) { e.stopPropagation(); db.update({ state: 'GO' }); }
-
-    function startCount() {
-        active = true;
-        let c = 3;
-        const itv = setInterval(() => {
-            if(c < 0) {
-                clearInterval(itv);
-                document.querySelectorAll('.input-field').forEach(i=>i.disabled=false);
-                const f = document.querySelector('.monitor.focused .input-field'); if(f) f.focus();
-                gameTimer();
-            }
-            c--;
-        }, 1000);
+    function updateVaultUI(team, list) {
+        const v = document.getElementById(`${team}-vault`), label = v.querySelector('.vault-label');
+        v.innerHTML = ''; v.appendChild(label);
+        list.forEach(e => { const s = document.createElement('span'); s.style.fontSize='3.5rem'; s.innerText = e; v.appendChild(s); });
     }
+
+    function reqStart(e) { e.stopPropagation(); db.update({ state: 'START' }); }
 
     function handleInput(e, id) {
         if(e.key === 'Enter') {
@@ -190,15 +188,17 @@
     }
 
     function gameTimer() {
+        document.querySelectorAll('.input-box').forEach(i => i.disabled = false);
+        const f = document.querySelector('.monitor.focused .input-box'); if(f) f.focus();
         let time = 600;
         setInterval(() => {
             if(time <= 0) return; time--;
-            document.getElementById('timer-disp').innerText = "LIMIT: " + (time/10).toFixed(1) + "s";
+            document.getElementById('timer-disp').innerText = (time/10).toFixed(1) + "s";
             isAlert = ((600-time)%200 >= 175);
             for(let i=1; i<=4; i++){
                 const s = document.getElementById(`sec-${i}`);
-                if(isAlert) { s.innerText = "🚨 경보! 보안 레이저 활성화 🚨"; s.classList.add('alert'); }
-                else { s.innerText = "📡 보안 우회 성공... 전송 가능"; s.classList.remove('alert'); }
+                if(isAlert) { s.innerText = "🚨 보안 경보! 멈추세요! 🚨"; s.classList.add('alert'); }
+                else { s.innerText = "📡 보안 우회 성공... 탈취 가능"; s.classList.remove('alert'); }
             }
         }, 100);
     }
