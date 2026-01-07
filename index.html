@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>타자 배틀 V62 - 시작 버튼 수정 완료</title>
+    <title>타자 배틀 V63 - 시작 버튼 완벽 제거</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
@@ -13,8 +13,6 @@
         #round-selector { position: fixed; inset: 0; background: var(--dark); z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .round-btn { width: 400px; padding: 30px; margin: 20px; font-size: 2rem; font-family: 'DungGeunMo'; cursor: pointer; border: 8px outset #eee; transition: 0.2s; border-radius: 10px; }
         .round-btn:hover { transform: scale(1.05); filter: brightness(1.2); }
-        #btn-r1 { background: #00b894; color: white; }
-        #btn-r2 { background: #6c5ce7; color: white; }
 
         #lobby-guide { position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #000; pointer-events: none; }
         #countdown { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 4000; display: none; align-items: center; justify-content: center; font-size: 10rem; color: var(--yellow); pointer-events: none; }
@@ -48,27 +46,26 @@
 
         .swap-bar-container { width: 100%; height: 12px; background: rgba(255,255,255,0.3); border-bottom: 2px solid var(--dark); }
         .swap-bar-fill { height: 100%; width: 100%; background: var(--yellow); transition: width 0.1s linear; }
-        .swap-warning { background: #ff4757; animation: blink 0.3s infinite; }
 
         .input-box { width: 100%; padding: 20px; font-family: 'DungGeunMo'; font-size: 2.5rem; border: none; border-top: 6px solid var(--dark); text-align: center; outline: none; }
         
-        /* 🚨 시작 버튼 최우선 순위 설정 */
-        .start-btn { display: none; padding: 25px 60px; font-size: 3rem; background: var(--yellow); border: 8px outset #fff; cursor: pointer; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3000; font-family: 'DungGeunMo'; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-        .focused .start-btn { display: block !important; }
+        /* 🚨 시작 버튼 제어 강화 */
+        .start-btn { display: none; padding: 25px 60px; font-size: 3rem; background: var(--yellow); border: 8px outset #fff; cursor: pointer; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3000; font-family: 'DungGeunMo'; }
+        .focused .start-btn { display: block; }
+        /* 게임 시작 후에는 무조건 숨김 */
+        body.game-on .start-btn { display: none !important; pointer-events: none !important; }
         
         #bonus-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); background: var(--gold); border: 10px solid var(--dark); padding: 40px; z-index: 2500; color: #000; text-align: center; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); min-width: 400px; }
         #bonus-popup.active { transform: translate(-50%, -50%) scale(1); }
         #bonus-reward-badge { background: #000; color: var(--gold); padding: 5px 15px; border-radius: 20px; font-size: 1.5rem; margin-top: 10px; display: inline-block; }
-
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     </style>
 </head>
 <body>
 
 <div id="round-selector">
-    <h1 style="font-size: 4rem; margin-bottom: 50px; color: var(--yellow);">🏫 타자 학교 V62 🏫</h1>
-    <button id="btn-r1" class="round-btn" onclick="selectRound(1)">1라운드: 텍스트 모드</button>
-    <button id="btn-r2" class="round-btn" onclick="selectRound(2)">2라운드: 이모지 모드</button>
+    <h1 style="font-size: 4rem; margin-bottom: 50px; color: var(--yellow);">🏫 타자 학교 V63 🏫</h1>
+    <button id="btn-r1" class="round-btn" style="background:#00b894; color:white;" onclick="selectRound(1)">1라운드: 텍스트 모드</button>
+    <button id="btn-r2" class="round-btn" style="background:#6c5ce7; color:white;" onclick="selectRound(2)">2라운드: 이모지 모드</button>
 </div>
 
 <div id="countdown">3</div>
@@ -133,7 +130,7 @@
     let currentRound = 1;
     const firebaseConfig = { databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database().ref('game_visual_v62');
+    const db = firebase.database().ref('game_visual_v63');
 
     let monTeams = { 1: null, 2: null, 3: null, 4: null };
     let hasStarted = false, isWatching = false, isCounting = false, isGameOver = false, activeBonus = "", bonusReward = 0;
@@ -151,7 +148,7 @@
     function initBoard() {
         for(let i=1; i<=4; i++){
             const b = document.getElementById(`board-${i}`);
-            b.innerHTML = ""; // 보드 내부 카드만 초기화
+            b.innerHTML = "";
             wordSet.forEach(item => {
                 const c = document.createElement('div');
                 c.className = 'card-container'; c.id = `card-${i}-${item.t}`;
@@ -173,8 +170,7 @@
         
         activeBonus = d.bonusWord || "";
         bonusReward = d.bonusReward || 0;
-        const popup = document.getElementById('bonus-popup');
-        popup.classList.toggle('active', !!activeBonus);
+        document.getElementById('bonus-popup').classList.toggle('active', !!activeBonus);
         if(activeBonus) {
             document.getElementById('bonus-word-display').innerText = activeBonus;
             document.getElementById('bonus-reward-badge').innerText = `💎 보상: ${bonusReward}장 탈취`;
@@ -209,8 +205,12 @@
                 monTeams = { 1: 'red', 2: 'blue', 3: 'red', 4: 'blue' };
                 updateMonitorUI();
                 hasStarted = true; isCounting = false;
-                document.getElementById('lobby-guide').style.display = 'none';
+                
+                // 🚨 핵심: 게임 상태를 클래스로 부여하고 버튼 제거
+                document.body.classList.add('game-on');
                 document.querySelectorAll('.start-btn').forEach(b => b.style.display = 'none');
+                
+                document.getElementById('lobby-guide').style.display = 'none';
                 document.querySelectorAll('.input-box').forEach(i => i.disabled = false);
                 gameLoop();
             }
@@ -275,11 +275,6 @@
                 document.getElementById('timer-disp').innerText = (time/10).toFixed(1) + "s";
                 document.getElementById('main-progress-bar').style.width = (time / 600 * 100) + "%";
                 const cyclePos = (600 - time) % 100;
-                const swapPercent = 100 - cyclePos;
-                for(let i=1; i<=4; i++) {
-                    const bar = document.getElementById(`swap-bar-${i}`);
-                    if(bar) bar.style.width = swapPercent + "%";
-                }
                 if(cyclePos === 0) {
                     for(let i=1; i<=4; i++) monTeams[i] = (monTeams[i]==='red')?'blue':'red';
                     updateMonitorUI();
