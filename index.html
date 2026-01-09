@@ -2,14 +2,14 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>NATION BUILDER v18.0 - Perfect Cycle</title>
+    <title>NATION BUILDER v18.4 - Infinite Keywords</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --dark: #050505; --red: #FF0000; --blue: #0000FF; --red-bg: #300000; --blue-bg: #000030; --yellow: #ffea00; }
+        :root { --dark: #050505; --red: #FF0000; --blue: #0000FF; --red-bg: #200000; --blue-bg: #000020; --yellow: #ffea00; }
         body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', monospace; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         #intro-gate { position: fixed; inset: 0; background: #000; z-index: 20000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .start-sys-btn { padding: 20px 60px; font-size: 2rem; background: var(--yellow); border: none; cursor: pointer; border-radius: 10px; font-family: 'DungGeunMo'; }
@@ -25,54 +25,55 @@
         .monitor.team-blue { border-color: var(--blue); background: var(--blue-bg) !important; }
         .monitor.focused { position: fixed !important; top: 110px; left: 20px; right: 20px; bottom: 20px; z-index: 5000; }
         .up-btn { width: 100%; font-family: 'DungGeunMo'; padding: 8px 0; background: #222; color: #aaa; border: 1px solid #444; border-radius: 6px; cursor: pointer; }
-        .up-btn i { font-size: 1.8rem; }
         .up-btn.ready { background: var(--yellow); color: #000; animation: blink 0.5s infinite; }
         .board { display: grid; grid-template-columns: repeat(14, 1fr); gap: 5px; flex: 1; padding: 15px; }
-        .card { background: rgba(255,255,255,0.05); border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #555; border-radius: 4px; }
-        .card.owned-red { background: var(--red) !important; color: #fff; box-shadow: 0 0 5px #fff; }
-        .card.owned-blue { background: var(--blue) !important; color: #fff; box-shadow: 0 0 5px #fff; }
+        .card { background: rgba(255,255,255,0.05); border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #777; border-radius: 4px; text-align: center; }
+        .card.owned-red { background: var(--red) !important; color: #fff; }
+        .card.owned-blue { background: var(--blue) !important; color: #fff; }
+        .alert-layer { position: absolute; inset: 0; z-index: 9000; display: none; align-items: center; justify-content: center; background: rgba(255, 0, 0, 0.4); backdrop-filter: blur(2px); pointer-events: none; }
+        .alert-box { font-size: 5rem; border: 10px double #fff; padding: 20px; background: rgba(0,0,0,0.6); animation: blink 0.2s infinite; }
         .gate { position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 8000; display: none; align-items: center; justify-content: center; }
-        .gate-btn { padding: 25px 60px; font-family: 'DungGeunMo'; font-size: 2.5rem; background: var(--yellow); border: none; cursor: pointer; }
         .input-wrap { height: 85px; background: #000; border-top: 2px solid #333; display: flex; }
         .input-box { flex: 1; background: transparent; border: none; font-size: 3.5rem; text-align: center; outline: none; font-family: 'DungGeunMo'; color: #fff; }
-        #result-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; }
-        #chart-wrap { width: 550px; height: 550px; background: #000; padding: 30px; border: 1px solid #444; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        #result-screen { position: fixed; inset: 0; background: radial-gradient(circle, #1a1a1a 0%, #000 100%); z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        #chart-wrap { width: 650px; height: 650px; background: rgba(255,255,255,0.02); padding: 50px; border: 2px solid #333; border-radius: 50%; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     </style>
 </head>
 <body>
 
-<div id="intro-gate"><button class="start-sys-btn" onclick="initSystem()">INITIALIZE CONNECTION</button></div>
+<div id="intro-gate"><button class="start-sys-btn" onclick="initSystem()">INITIALIZE WORLD</button></div>
 
 <div id="top-bar">
     <div id="timer-row">
         <div id="timer-disp">READY</div>
-        <div class="swap-container"><div id="swap-bar"></div><div class="swap-text">TEAM SWAP SYSTEM</div></div>
-        <div style="font-size: 1rem; color:var(--yellow);">QUEST v18.0</div>
+        <div class="swap-container"><div id="swap-bar"></div><div class="swap-text">GENERATING RANDOM BIOMES</div></div>
+        <div style="font-size: 1rem; color:#888;">INFINITE v18.4</div>
     </div>
 </div>
 
 <div id="room-view">
     <script>
         const cityList = ['발전','강철','자본','미래','지혜'];
-        const icons = ["fas fa-spider", "fas fa-home", "fas fa-gun", "fas fa-chess-rook", "fas fa-globe", "fas fa-crown"];
+        const rankNames = ['공터', '마을', '도시', '도시', '개도국', '선진국'];
+        const icons = ["fas fa-seedling", "fas fa-home", "fas fa-building", "fas fa-city", "fas fa-industry", "fas fa-crown"];
         for(let i=1; i<=4; i++) {
             document.write(`
                 <div class="monitor" id="mon-${i}" onclick="zoomIn(event, ${i})">
-                    <div class="alert-layer" id="alert-${i}" style="position:absolute; inset:0; z-index:9000; display:none; align-items:center; justify-content:center; background:rgba(255,0,0,0.95);"><div style="font-size:5rem; border:10px double #fff; padding:20px; animation:blink 0.2s infinite;">WATCHING!!</div></div>
-                    <div class="stats-layer" style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; padding:10px; background:rgba(0,0,0,0.8);">
+                    <div class="alert-layer" id="alert-${i}"><div class="alert-box">WATCHING!!</div></div>
+                    <div class="stats-layer" style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; padding:10px; background:rgba(0,0,0,0.85); z-index:100;">
                         ${cityList.map((c, idx) => `
                             <div class="stat-item" style="text-align:center;">
-                                <div style="font-size:0.8rem; color:#888;">${c}</div>
-                                <div class="count-val" id="cnt-${i}-${idx}" style="color:#00ffcc; font-weight:bold;">0/10</div>
+                                <div style="font-size:0.75rem; color:#888;">${c}</div>
+                                <div class="count-val" id="cnt-${i}-${idx}" style="color:#00ffcc; font-size:1rem; font-weight:bold;">0/10</div>
                                 <button class="up-btn" id="up-${i}-${idx}" onclick="requestUpgrade(event, ${i}, ${idx})">
-                                    <i class="${icons[0]}"></i><br><span id="name-${i}-${idx}">LV.0</span>
+                                    <i class="${icons[0]}"></i><br><span id="name-${i}-${idx}">${rankNames[0]}</span>
                                 </button>
                             </div>
                         `).join('')}
                     </div>
-                    <div id="bonus-pop-${i}" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--yellow); color:#000; padding:20px 40px; font-size:2.5rem; display:none; z-index:7500; border:5px solid #fff;"></div>
-                    <div class="gate" id="gate-${i}"><button class="gate-btn" onclick="triggerStart(event, ${i})">LOGIN</button></div>
+                    <div id="bonus-pop-${i}" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--yellow); color:#000; padding:30px 60px; font-size:3.5rem; display:none; z-index:7500; border:10px double #fff; text-align:center; box-shadow:0 0 50px #000;"></div>
+                    <div class="gate" id="gate-${i}"><button style="padding:25px 60px; font-family:'DungGeunMo'; font-size:2.5rem; background:var(--yellow); border:none; cursor:pointer;" onclick="triggerStart(event, ${i})">GENERATE ROUND</button></div>
                     <div class="board" id="board-${i}"></div>
                     <div class="input-wrap">
                         <input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" onclick="event.stopPropagation()" placeholder="..." disabled autocomplete="off">
@@ -84,29 +85,32 @@
 </div>
 
 <div id="result-screen">
-    <h1 style="color:var(--yellow); font-size:3rem; margin-bottom:20px;">MISSION REPORT</h1>
+    <div style="font-size:3rem; color:var(--yellow); margin-bottom:20px;">ROUND SETTLEMENT</div>
     <div id="chart-wrap"><canvas id="radarChart"></canvas></div>
-    <button onclick="nextRound()" style="margin-top:30px; padding:15px 60px; font-family:'DungGeunMo'; background:var(--yellow); border:none; cursor:pointer; font-size:1.5rem;">NEXT ROUND</button>
+    <button style="margin-top:30px; padding:15px 60px; font-family:'DungGeunMo'; background:var(--yellow); border:none; cursor:pointer; font-size:1.5rem;" onclick="nextRound()">START NEW RANDOM ROUND</button>
 </div>
 
 <script>
-    const cityMap = {
-        '발전': ['석탄','태양광','원자력','석유','전기','풍력','수소','배터리','가스','화력','수력','광물','송전탑','에너지'],
-        '강철': ['철강','금속','자동차','선박','반도체','기계','로봇','화석','화학','부품','공장','엔진','주물','용접'],
-        '자본': ['은행','주식','채권','투자','자산','환율','금리','펀드','보험','증권','코인','세금','대출','신용'],
-        '미래': ['AI','소프트웨어','클라우드','서버','보안','코딩','알고리즘','양자','센서','회로','위성','해킹','웹3','빅데이터'],
-        '지혜': ['교육','의료','대학','훈련','연구','백신','임상','장학','인재','교수','의사','도서관','백과','멘토']
+    // 방대한 단어 풀 (각 카테고리별 무작위 단어)
+    const wordPool = {
+        '발전': ['석탄','태양광','원자력','석유','전기','풍력','수소','배터리','가스','화력','수력','광물','송전탑','에너지','핵융합','조력','지열','탄소','그리드','발전소','변압기','절전','전압','전류','암페어','와트','전선','단열','충전','방전','연료','우라늄','플루토늄','정유'],
+        '강철': ['철강','금속','자동차','선박','반도체','기계','로봇','화석','화학','부품','공장','엔진','주물','용접','합금','알루미늄','구리','니켈','망간','티타늄','강판','볼트','너트','베어링','프레스','선반','밀링','도금','금형','배관','탱크','크레인','중장비','굴착기'],
+        '자본': ['은행','주식','채권','투자','자산','환율','금리','펀드','보험','증권','코인','세금','대출','신용','나스닥','코스피','배당','영업','수익','지출','예산','회계','감사','매출','재무','부채','자본금','유동성','인플레이션','디플레이션','금고','현금','수표','어음'],
+        '미래': ['AI','소프트웨어','클라우드','서버','보안','코딩','알고리즘','양자','센서','회로','위성','해킹','웹3','빅데이터','메타버스','블록체인','딥러닝','신경망','로보틱스','드론','가상현실','증강현실','해커','방화벽','서버실','데이터센터','API','리눅스','파이썬','자바','C언어','펌웨어','임베디드'],
+        '지혜': ['교육','의료','대학','훈련','연구','백신','임상','장학','인재','교수','의사','도서관','백과','멘토','철학','논리','수학','과학','물리','심리','역사','언어','문학','예술','창의','지식','데이터','정보','지능','학습','강의','세미나','학회','특허']
     };
 
+    let currentWords = []; 
     let pCards = {}, active = false, isAlert = false, bonusWord = "";
     let cityLevels = { red: [0,0,0,0,0], blue: [0,0,0,0,0] }; 
     let currentTeams = { 1:'red', 2:'red', 3:'blue', 4:'blue' };
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v18_0');
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v18_4');
+    let radarChartInstance = null;
 
     function initSystem() { document.getElementById('intro-gate').style.display = 'none'; }
 
     function zoomIn(e, id) {
-        if(e.target.tagName === 'INPUT' || e.target.closest('.up-btn') || e.target.closest('.gate-btn')) return;
+        if(e.target.tagName === 'INPUT' || e.target.closest('.up-btn') || e.target.closest('button')) return;
         document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
         document.getElementById(`mon-${id}`).classList.add('focused');
         if(document.getElementById(`in-${id}`).disabled && !active) {
@@ -114,22 +118,31 @@
         }
     }
 
+    // [신규] 랜덤 단어 추출 함수
+    function getRandomWords() {
+        let selected = [];
+        Object.keys(wordPool).forEach(cat => {
+            const shuffled = [...wordPool[cat]].sort(() => 0.5 - Math.random());
+            selected.push(...shuffled.slice(0, 14)); // 각 카테고리에서 14개씩 무작위 추출
+        });
+        return selected;
+    }
+
     function triggerStart(e, id) {
         e.preventDefault(); e.stopPropagation();
-        db.update({ state: 'START', words: Object.values(cityMap).flat() });
+        const words = getRandomWords();
+        db.update({ state: 'START', words: words });
         db.child('cards').remove();
     }
 
     db.on('value', snap => {
         const d = snap.val(); if(!d) return;
         if(d.state === 'START' && !active) { 
-            active = true; 
-            startTimer(); 
-            // 누군가 시작하면 모든 게이트 숨김
+            active = true; startTimer(); 
             document.querySelectorAll('.gate').forEach(g => g.style.display = 'none');
             document.querySelectorAll('.input-box').forEach(inp => inp.disabled = false);
         }
-        if(d.words) initBoard(d.words);
+        if(d.words) { currentWords = d.words; initBoard(d.words); }
         if(d.teams) currentTeams = d.teams;
         pCards = d.cards || {};
         bonusWord = d.bonus || "";
@@ -140,7 +153,7 @@
     function initBoard(words) {
         for(let i=1; i<=4; i++) {
             const b = document.getElementById(`board-${i}`);
-            if(b.children.length > 0) continue;
+            b.innerHTML = ""; // 매번 새로 그리기 (단어가 바뀌므로)
             words.forEach(w => {
                 const div = document.createElement('div');
                 div.className = 'card'; div.id = `card-${i}-${w}`; div.innerText = w;
@@ -153,20 +166,22 @@
         const team = currentTeams[id];
         if(e.key === 'Enter') {
             const val = e.target.value.trim();
-            // 1. 감시 모드 페널티 (2장 삭제)
             if(isAlert) {
                 const mine = Object.keys(pCards).filter(k => pCards[k] === team);
                 mine.slice(0, 2).forEach(k => db.child('cards').child(k).remove());
                 e.target.value = ""; return;
             }
-            // 2. 보너스 퀴즈 (상대 3장 뺏기)
             if(val === bonusWord && bonusWord !== "") {
                 const enemy = (team === 'red') ? 'blue' : 'red';
                 const eCards = Object.keys(pCards).filter(k => pCards[k] === enemy);
                 eCards.slice(0, 3).forEach(k => db.child('cards').child(k).set(team));
                 db.update({ bonus: "" });
-            } else if(Object.values(cityMap).flat().includes(val)) {
-                db.child('cards').child(val).set(team);
+            } else if(currentWords.includes(val)) {
+                const owner = pCards[val];
+                let cIdx = -1;
+                Object.keys(wordPool).forEach((c, idx) => { if(wordPool[c].includes(val)) cIdx = idx; });
+                if(!owner) db.child('cards').child(val).set(team);
+                else if(owner !== team && cityLevels[team][cIdx] >= 2) db.child('cards').child(val).set(team);
             }
             e.target.value = "";
         }
@@ -177,16 +192,14 @@
         Object.keys(pCards).forEach(w => {
             const t = pCards[w];
             let cIdx = -1;
-            Object.keys(cityMap).forEach((c, idx) => { if(cityMap[c].includes(w)) cIdx = idx; });
+            Object.keys(wordPool).forEach((c, idx) => { if(wordPool[c].includes(w)) cIdx = idx; });
             if(cIdx !== -1) counts[t][cIdx]++;
             for(let i=1; i<=4; i++) {
                 const card = document.getElementById(`card-${i}-${w}`);
                 if(card) card.className = `card owned-${t}`;
             }
         });
-        // 점유 안 된 카드 초기화
-        const allWords = Object.values(cityMap).flat();
-        allWords.forEach(w => {
+        currentWords.forEach(w => {
             if(!pCards[w]) {
                 for(let i=1; i<=4; i++) {
                     const card = document.getElementById(`card-${i}-${w}`);
@@ -194,11 +207,8 @@
                 }
             }
         });
-
         for(let i=1; i<=4; i++) {
             const t = currentTeams[i];
-            const mon = document.getElementById(`mon-${i}`);
-            mon.className = `monitor team-${t} ${mon.classList.contains('focused')?'focused':''}`;
             document.getElementById(`alert-${i}`).style.display = isAlert ? 'flex' : 'none';
             cityList.forEach((_, idx) => {
                 const s = counts[t][idx]; const l = cityLevels[t][idx];
@@ -206,18 +216,25 @@
                 const btn = document.getElementById(`up-${i}-${idx}`);
                 btn.classList.toggle('ready', s >= (l+1)*10 && l < 5);
                 btn.querySelector('i').className = icons[l];
-                btn.querySelector('span').innerText = `LV.${l}`;
+                btn.querySelector('span').innerText = rankNames[l];
             });
             const bp = document.getElementById(`bonus-pop-${i}`);
-            if(bonusWord) { bp.style.display='block'; bp.innerText=`BONUS: ${bonusWord}`; } else { bp.style.display='none'; }
+            if(bonusWord) { bp.style.display='block'; bp.innerText=`BONUS\n[ ${bonusWord} ]`; } else { bp.style.display='none'; }
         }
     }
 
     function requestUpgrade(e, id, idx) {
         e.stopPropagation();
         const t = currentTeams[id];
-        const s = Object.keys(pCards).filter(k => cityMap[cityList[idx]].includes(k) && pCards[k] === t).length;
-        if(s >= (cityLevels[t][idx]+1)*10 && cityLevels[t][idx] < 5) { cityLevels[t][idx]++; updateUI(); }
+        const counts = { red: [0,0,0,0,0], blue: [0,0,0,0,0] };
+        Object.keys(pCards).forEach(w => {
+            let cIdx = -1;
+            Object.keys(wordPool).forEach((c, i) => { if(wordPool[c].includes(w)) cIdx = i; });
+            if(cIdx !== -1) counts[pCards[w]][cIdx]++;
+        });
+        if(counts[t][idx] >= (cityLevels[t][idx]+1)*10 && cityLevels[t][idx] < 5) {
+            cityLevels[t][idx]++; updateUI();
+        }
     }
 
     function startTimer() {
@@ -226,18 +243,12 @@
             time--;
             document.getElementById('timer-disp').innerText = (time/10).toFixed(1) + "s";
             document.getElementById('swap-bar').style.width = (time % 100) + "%";
-
-            // [핵심] 보너스 문제 (20초 주기 = 200단위)
             if(time % 200 === 180) {
-                const all = Object.values(cityMap).flat();
-                db.update({ bonus: all[Math.floor(Math.random()*all.length)] });
+                db.update({ bonus: currentWords[Math.floor(Math.random()*currentWords.length)] });
             }
             if(time % 200 === 0) db.update({ bonus: "" });
-
-            // [핵심] 감시 모드 (28초 주기 = 280단위, 2초간 유지)
             if(time % 280 === 20) db.update({ alertMode: true });
             if(time % 280 === 0) db.update({ alertMode: false });
-
             if(time % 100 === 0 && time > 0) {
                 const ts = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
                 db.update({ teams: { 1:ts[0], 2:ts[1], 3:ts[2], 4:ts[3] } });
@@ -249,26 +260,28 @@
     function showResult() {
         document.getElementById('result-screen').style.display = 'flex';
         const ctx = document.getElementById('radarChart').getContext('2d');
-        new Chart(ctx, {
+        if(radarChartInstance) radarChartInstance.destroy();
+        radarChartInstance = new Chart(ctx, {
             type: 'radar',
             data: {
                 labels: cityList,
                 datasets: [
-                    { label: 'RED TEAM', data: cityLevels.red, backgroundColor: 'rgba(255,0,0,0.5)', borderColor: 'red', borderWidth: 3 },
-                    { label: 'BLUE TEAM', data: cityLevels.blue, backgroundColor: 'rgba(0,0,255,0.5)', borderColor: 'blue', borderWidth: 3 }
+                    { label: 'RED TEAM', data: cityLevels.red, backgroundColor: 'rgba(255,0,0,0.5)', borderColor: 'red', borderWidth: 3, fill: true },
+                    { label: 'BLUE TEAM', data: cityLevels.blue, backgroundColor: 'rgba(0,0,255,0.5)', borderColor: 'blue', borderWidth: 3, fill: true }
                 ]
             },
-            options: { scales: { r: { min: 0, max: 5, grid: { color: '#333' }, ticks: { display: false } } } }
+            options: {
+                scales: { r: { min: 0, max: 5, grid: { color: '#444' }, pointLabels: { color: '#fff', font: { size: 18 } }, ticks: { display: false } } },
+                plugins: { legend: { labels: { color: '#fff', font: { size: 15 } } } }
+            }
         });
     }
 
     function nextRound() {
-        db.update({ state: 'READY', alertMode: false, bonus: "" });
+        db.update({ state: 'READY', alertMode: false, bonus: "", words: null }); // words 초기화하여 다음 판 유도
         active = false;
         document.getElementById('result-screen').style.display = 'none';
         document.querySelectorAll('.input-box').forEach(inp => { inp.disabled = true; inp.value = ""; });
-        document.querySelectorAll('.gate').forEach(g => g.style.display = 'none');
-        document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
     }
 </script>
 </body>
