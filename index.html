@@ -2,50 +2,57 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>MAFIA: EMPIRE EVOLUTION v23</title>
+    <title>MAFIA: EMPIRE EVOLUTION v23.5</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --red: #ff0000; --blue: #0044ff; --yellow: #ffcc00; --dark: #0a0a0a; --neon: #00ff00; }
-        body { background: var(--dark); color: #fff; font-family: 'DungGeunMo'; margin: 0; overflow: hidden; }
+        :root { --red: #ff0000; --blue: #0044ff; --yellow: #ffcc00; --dark: #000; --neon: #00ff00; }
+        body { background: var(--dark); color: #fff; font-family: 'DungGeunMo'; margin: 0; overflow: hidden; height: 100vh; }
         
-        /* 상단 영역: 미등록 텍스트 제거, 아이콘 가시성 확보 */
-        #top-bar { height: 80px; background: #111; display: flex; align-items: center; justify-content: space-around; padding: 0 20px; border-bottom: 3px solid #333; }
-        #timer-disp { font-size: 3rem; color: var(--yellow); }
-        .top-icons { display: flex; gap: 30px; }
-        .top-icons div { text-align: center; position: relative; }
-        .top-icons i { font-size: 2.5rem; color: #222; transition: 0.3s; }
-        .upgrade-ready { color: var(--neon) !important; text-shadow: 0 0 10px var(--neon); }
+        /* 상단 바 및 아이콘 */
+        #top-bar { height: 90px; background: #0a0a0a; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; border-bottom: 3px solid #333; }
+        #timer-disp { font-size: 3.5rem; color: var(--yellow); min-width: 150px; }
+        .top-icons { display: flex; gap: 40px; flex: 1; justify-content: center; }
+        .top-icons div { text-align: center; }
+        .top-icons i { font-size: 3rem; color: #222; transition: 0.3s; }
+        .upgrade-ready { color: var(--yellow) !important; text-shadow: 0 0 20px var(--yellow); transform: scale(1.2); }
 
-        /* 10초 막대 바 */
-        #turn-progress-container { position: absolute; top: 77px; left: 0; width: 100%; height: 8px; background: #222; z-index: 1000; }
-        #turn-progress-bar { width: 100%; height: 100%; background: var(--neon); transition: width 0.1s linear; }
+        /* 10초 게이지 */
+        #progress-container { position: absolute; top: 87px; left: 0; width: 100%; height: 8px; background: #222; z-index: 1000; }
+        #progress-bar { width: 100%; height: 100%; background: var(--neon); transition: width 0.1s linear; }
 
-        /* 모니터 설정 및 팀 컬러 연출 (과하게) */
-        #room-view { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; padding: 20px; height: calc(100vh - 100px); }
-        .monitor { position: relative; border: 10px solid #333; background: #000; transition: 0.3s; overflow: hidden; }
-        .monitor.focused { position: fixed !important; inset: 90px 15px 15px 15px; z-index: 5000; }
+        /* 게임 화면 (노 스크롤 레이아웃) */
+        #room-view { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; padding: 15px; height: calc(100vh - 100px); }
+        .monitor { position: relative; border: 8px solid #333; background: #050505; display: flex; flex-direction: column; transition: 0.2s; }
+        .monitor.focused { position: fixed !important; inset: 105px 15px 15px 15px; z-index: 5000; border-width: 15px; }
         
-        /* 팀별 강렬한 연출 */
-        .my-team-red { border-color: var(--red) !important; box-shadow: inset 0 0 150px rgba(255,0,0,0.5); }
-        .my-team-blue { border-color: var(--blue) !important; box-shadow: inset 0 0 150px rgba(0,68,255,0.5); }
+        /* 팀 컬러 연출 */
+        .my-team-red { border-color: var(--red) !important; box-shadow: inset 0 0 100px rgba(255,0,0,0.4); }
+        .my-team-blue { border-color: var(--blue) !important; box-shadow: inset 0 0 100px rgba(0,68,255,0.4); }
 
-        .radar-overlay { position: absolute; inset: 0; background: rgba(255,0,0,0.1); border: 5px solid var(--red); z-index: 6000; display: none; align-items: center; justify-content: center; font-size: 3rem; color: var(--red); pointer-events: none; }
+        /* 감시 모드 (눈알 & 레드 그리드) */
+        .radar-overlay { 
+            position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(255,0,0,0.1) 0px, rgba(255,0,0,0.1) 1px, transparent 1px, transparent 20px), repeating-linear-gradient(90deg, rgba(255,0,0,0.1) 0px, rgba(255,0,0,0.1) 1px, transparent 1px, transparent 20px); 
+            border: 10px solid var(--red); z-index: 6000; display: none; flex-direction: column; align-items: center; justify-content: center; color: var(--red); pointer-events: none;
+        }
+        .radar-overlay i { font-size: 15rem; animation: eye-shake 0.1s infinite; }
 
-        .board { flex: 1; display: grid; grid-template-columns: repeat(10, 5fr); gap: 2px; padding: 10px; height: 65%; overflow-y: auto; }
-        .card { background: #1a1a1a; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; border: 1px solid #333; color: #555; height: 30px; }
+        /* 단어 카드 (한눈에 들어오는 사이즈) */
+        .board { flex: 1; display: grid; grid-template-columns: repeat(13, 1fr); gap: 2px; padding: 5px; overflow: hidden; }
+        .card { background: #111; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; border: 1px solid #222; color: #444; height: 100%; }
         .card.owned-red { background: var(--red) !important; color: white; border: none; font-weight: bold; }
         .card.owned-blue { background: var(--blue) !important; color: white; border: none; font-weight: bold; }
 
-        .input-wrap { height: 80px; border-top: 5px solid #333; display: flex; }
-        .input-box { flex: 1; background: transparent; border: none; font-size: 4rem; text-align: center; color: #fff; font-family: 'DungGeunMo'; outline: none; }
+        /* 입력창 가독성 강화 */
+        .input-wrap { height: 100px; border-top: 5px solid #333; background: #000; display: flex; align-items: center; padding: 0 20px; }
+        .input-box { flex: 1; background: #111; border: 2px solid #444; font-size: 4.5rem; text-align: center; color: #fff; font-family: 'DungGeunMo'; outline: none; border-radius: 10px; }
+        .my-team-red .input-box { border-color: var(--red); box-shadow: 0 0 15px var(--red); }
+        .my-team-blue .input-box { border-color: var(--blue); box-shadow: 0 0 15px var(--blue); }
 
-        /* 결과 화면 */
-        #result-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; }
-        #evo-status { font-size: 2rem; color: var(--yellow); margin-bottom: 20px; }
+        @keyframes eye-shake { 0% { transform: translate(2px, 2px); } 100% { transform: translate(-2px, -2px); } }
     </style>
 </head>
 <body>
@@ -59,54 +66,44 @@
         <div title="기술"><i class="fas fa-microchip" id="ti-3"></i></div>
         <div title="인적자본"><i class="fas fa-users" id="ti-4"></i></div>
     </div>
-    <div id="current-stage" style="font-size:1.5rem; color:var(--yellow)">[기초 설립 단계]</div>
+    <div style="font-size:1.5rem; color:var(--yellow); min-width:150px; text-align:right;">[EMPIRE v23.5]</div>
 </div>
-<div id="turn-progress-container"><div id="turn-progress-bar"></div></div>
+<div id="progress-container"><div id="progress-bar"></div></div>
 
 <div id="room-view">
     <script>
         for(let i=1; i<=4; i++){
             document.write(`
                 <div class="monitor" id="mon-${i}" onclick="zoomIn(${i})">
-                    <div class="radar-overlay" id="radar-${i}">🚨 감시 모드: 타자 금지! 🚨</div>
-                    <div class="gate" id="gate-${i}" style="position:absolute; inset:0; background:rgba(0,0,0,0.8); z-index:100; display:flex; align-items:center; justify-content:center;">
-                        <button onclick="localStart(event, ${i})" style="padding:20px 40px; font-size:2rem; background:var(--yellow); border:none; cursor:pointer; font-family:'DungGeunMo'">조직 투입</button>
+                    <div class="radar-overlay" id="radar-${i}">
+                        <i class="fas fa-eye"></i>
+                        <div style="font-size:3rem; font-weight:bold;">WATCHING YOU</div>
+                    </div>
+                    <div class="gate" id="gate-${i}" style="position:absolute; inset:0; background:rgba(0,0,0,0.9); z-index:100; display:flex; align-items:center; justify-content:center;">
+                        <button onclick="localStart(event, ${i})" style="padding:20px 40px; font-size:2.5rem; background:var(--yellow); border:none; cursor:pointer; font-family:'DungGeunMo'">조직 투입</button>
                     </div>
                     <div class="board" id="board-${i}"></div>
-                    <div class="input-wrap"><input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="..." disabled autocomplete="off"></div>
+                    <div class="input-wrap">
+                        <input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="WAIT..." disabled autocomplete="off">
+                    </div>
                 </div>
             `);
         }
     </script>
 </div>
 
-<div id="result-screen">
-    <h1 style="color:var(--yellow); font-size:4rem;">영토 확장 분석</h1>
-    <div id="evo-status"></div>
-    <div style="position:relative; width:450px; height:450px;">
-        <canvas id="radarChart"></canvas>
-    </div>
-    <button onclick="nextRound()" style="margin-top:30px; padding:15px 60px; background:var(--yellow); border:none; font-size:2rem; font-family:'DungGeunMo'; cursor:pointer;">다음 단계로</button>
-</div>
-
 <script>
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('mafia_empire_v23');
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('mafia_v23_5');
     
-    // 마피아 컨셉 5대 영역 단어 리스트 (영역당 25개)
     const industryWords = {
-        0: ['석유','가스','원자력','석탄','발전기','전력망','송유관','정유소','유정','배터리','태양광','풍력','수력','조력','에너지','연료','가솔린','디젤','충전소','변압기','그리드','열병합','채굴','비축유','핵융합'],
-        1: ['철강','금속','기계','자동차','조선','항공','반도체','화학','섬유','플라스틱','로봇','생산라인','조립','금형','공장','부품','엔진','설비','제련소','단조','주조','선반','밀링','용접','산업'],
-        2: ['은행','증권','채권','보험','투자','자본','현금','금리','환율','금고','거래소','주식','펀드','신용','대출','자산','파생상품','금융','세금','지불','결제','핀테크','모기지','배당','예금'],
-        3: ['AI','데이터','소프트웨어','네트워크','보안','암호','클라우드','센서','알고리즘','인터페이스','프로그램','서버','디지털','시스템','회로','통신','위성','광섬유','연산','양자','해킹','방화벽','코딩','빅데이터','기술'],
-        4: ['인재','교육','훈련','노동','의료','전문가','기술자','연구원','리더십','매니저','노하우','경험','역량','지식','창의성','복지','보건','인력','스카우트','고용','인사','자격증','워크숍','성과','커리어']
+        0: ['석유','가스','원자','석탄','발전','전력','송유','유정','배터리','태양','풍력','수력','조력','에너지','연료','가솔린','디젤','충전','변압','그리드','열병합','채굴','비축','핵융합','전기'],
+        1: ['철강','금속','기계','차량','조선','항공','소재','화학','섬유','반도체','로봇','라인','조립','금형','공장','부품','엔진','설비','제련','단조','주조','선반','밀링','용접','산업'],
+        2: ['은행','증권','채권','보험','투자','자본','현금','금리','환율','금고','거래','주식','펀드','신용','대출','자산','파생','금융','세금','지불','결제','핀테크','모기지','배당','예금'],
+        3: ['AI','데이터','보안','암호','서버','센서','클라우드','연산','양자','해킹','통신','위성','회로','시스템','광섬유','방화벽','코딩','웹','앱','디지털','인공','지능','비트','코드','소프트'],
+        4: ['인재','교육','훈련','노동','의료','전문','기술','연구','리더','경험','역량','지식','창의','복지','보건','인력','인사','자격','성과','학습','스킬','강사','멘토','매니저','워크']
     };
     const allWords = Object.values(industryWords).flat();
-    const catNames = ['에너지','제조','금융','기술','인적자본'];
-    const rankIcons = ['fa-bolt','fa-industry','fa-coins','fa-microchip','fa-users'];
-
-    let active = false, pCards = {}, teams = {1:'red', 2:'red', 3:'blue', 4:'blue'}, focusedId = null, currentStage = "기초 설립";
-    let scores = { red: [0,0,0,0,0], blue: [0,0,0,0,0] };
-    let isAlert = false;
+    let active = false, pCards = {}, teams = {1:'red', 2:'red', 3:'blue', 4:'blue'}, focusedId = null, isWatcher = false;
 
     function zoomIn(id) { focusedId = id; document.querySelectorAll('.monitor').forEach(m=>m.classList.remove('focused')); document.getElementById(`mon-${id}`).classList.add('focused'); }
 
@@ -122,13 +119,11 @@
         const d = snap.val(); if(!d) return;
         pCards = d.cards || {}; teams = d.teams || teams;
         if(d.state === 'RUNNING' && !active) { active = true; startGlobalTimer(); }
-        if(d.state === 'FINISHED') showResult();
         updateUI();
     });
 
     function handleInput(e, id) {
-        if(e.key !== 'Enter') return;
-        if(isAlert) { e.target.value = ""; return; }
+        if(e.key !== 'Enter' || isWatcher) return;
         const val = e.target.value.trim();
         const team = teams[id];
         if(allWords.includes(val)) db.child('cards').child(val).set(team);
@@ -141,42 +136,37 @@
         const mainIntr = setInterval(() => {
             time--; turnTime--;
             document.getElementById('timer-disp').innerText = `${Math.floor(time/60)}:${(time%60).toString().padStart(2,'0')}`;
-            document.getElementById('turn-progress-bar').style.width = (turnTime/10 * 100) + "%";
+            document.getElementById('progress-bar').style.width = (turnTime/10 * 100) + "%";
 
-            // 10초마다 팀 랜덤 교체
             if(turnTime <= 0) {
                 turnTime = 10;
                 if(focusedId === 1) {
                     const nextTeams = {};
-                    const teamPool = ['red','red','blue','blue'].sort(() => Math.random()-0.5);
-                    for(let i=1; i<=4; i++) nextTeams[i] = teamPool[i-1];
+                    const pool = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
+                    for(let i=1; i<=4; i++) nextTeams[i] = pool[i-1];
                     db.update({teams: nextTeams});
                 }
             }
-            // 30초마다 2초 감시 (타자 금지)
-            isAlert = (time % 30 < 2 && time % 30 > 0);
-            document.querySelectorAll('.radar-overlay').forEach(r => r.style.display = isAlert ? 'flex' : 'none');
+            
+            // 30초 주기 감시 모드 (27~30초 사이 발동)
+            isWatcher = (time % 30 < 3 && time % 30 > 0);
+            document.querySelectorAll('.radar-overlay').forEach(r => r.style.display = isWatcher ? 'flex' : 'none');
 
             if(time <= 0) { clearInterval(mainIntr); db.update({state:'FINISHED'}); }
         }, 1000);
     }
 
     function updateUI() {
-        // 점수 계산
-        let newScores = { red: [0,0,0,0,0], blue: [0,0,0,0,0] };
+        let scores = { red: [0,0,0,0,0], blue: [0,0,0,0,0] };
         Object.keys(pCards).forEach(w => {
             const team = pCards[w];
-            for(let i=0; i<5; i++) {
-                if(industryWords[i].includes(w)) newScores[team][i]++;
-            }
+            for(let i=0; i<5; i++) if(industryWords[i].includes(w)) scores[team][i]++;
         });
-        scores = newScores;
 
-        // 상단 아이콘 업데이트 (20개 달성 시 불 들어옴)
+        // 상단 아이콘 업그레이드 체크 (20개 이상 시 황금색)
         for(let i=0; i<5; i++) {
-            const maxScore = Math.max(scores.red[i], scores.blue[i]);
             const icon = document.getElementById(`ti-${i}`);
-            if(maxScore >= 20) icon.classList.add('upgrade-ready');
+            if(Math.max(scores.red[i], scores.blue[i]) >= 20) icon.classList.add('upgrade-ready');
             else icon.classList.remove('upgrade-ready');
         }
 
@@ -186,33 +176,6 @@
             const board = document.getElementById(`board-${i}`);
             board.innerHTML = allWords.map(w => `<div class="card ${pCards[w]?'owned-'+pCards[w]:''}">${w}</div>`).join('');
         }
-    }
-
-    function showResult() {
-        document.getElementById('result-screen').style.display = 'flex';
-        const upCount = scores.red.filter(s => s >= 20).length + scores.blue.filter(s => s >= 20).length;
-        document.getElementById('evo-status').innerText = `업그레이드 가능 영역: ${upCount} / 5`;
-        
-        const ctx = document.getElementById('radarChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'radar',
-            data: {
-                labels: catNames,
-                datasets: [
-                    { label: 'RED MAFIA', data: scores.red, borderColor: 'red', backgroundColor: 'rgba(255,0,0,0.2)' },
-                    { label: 'BLUE MAFIA', data: scores.blue, borderColor: 'blue', backgroundColor: 'rgba(0,0,255,0.2)' }
-                ]
-            },
-            options: {
-                scales: { r: { min: 0, max: 25, ticks: { display: false }, grid: { color: '#444' }, pointLabels: { color: '#fff', font: { size: 18 } } } }
-            }
-        });
-    }
-
-    function nextRound() {
-        const upCount = scores.red.filter(s => s >= 20).length; // 예시: 레드 기준
-        if(upCount >= 5) alert("국가가 [개발 도상국]으로 진화했습니다!");
-        location.reload();
     }
 </script>
 </body>
