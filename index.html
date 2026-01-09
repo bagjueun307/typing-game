@@ -2,57 +2,54 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>NATION BUILDER v17.8 - Legacy Reset</title>
+    <title>NATION BUILDER v17.9 - Final Fix</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { 
-            --dark: #050505; --red: #FF0000; --blue: #0000FF; 
-            --red-bg: #300000; --blue-bg: #000030; --yellow: #ffea00;
-        }
+        :root { --dark: #050505; --red: #FF0000; --blue: #0000FF; --red-bg: #300000; --blue-bg: #000030; --yellow: #ffea00; }
         body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', monospace; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
+        /* 인트로 */
         #intro-gate { position: fixed; inset: 0; background: #000; z-index: 20000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .start-sys-btn { padding: 20px 60px; font-family: 'DungGeunMo'; font-size: 2rem; background: var(--yellow); border: none; cursor: pointer; border-radius: 10px; box-shadow: 0 0 20px var(--yellow); }
+        .start-sys-btn { padding: 20px 60px; font-size: 2rem; background: var(--yellow); border: none; cursor: pointer; border-radius: 10px; font-family: 'DungGeunMo'; }
 
-        #top-bar { height: 100px; background: #000; border-bottom: 2px solid #333; z-index: 1000; display: flex; flex-direction: column; }
-        #timer-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 25px; flex: 1; }
-        #timer-disp { font-size: 2.8rem; color: var(--yellow); width: 200px; }
-        
-        .swap-container { width: 400px; height: 30px; background: #222; border: 2px solid #444; position: relative; border-radius: 5px; overflow: hidden; }
+        /* 상단 바 */
+        #top-bar { height: 100px; background: #000; border-bottom: 2px solid #333; z-index: 1000; }
+        #timer-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 25px; }
+        #timer-disp { font-size: 2.8rem; color: var(--yellow); min-width: 150px; }
+        .swap-container { width: 350px; height: 25px; background: #222; border: 2px solid #444; position: relative; overflow: hidden; }
         #swap-bar { height: 100%; width: 100%; background: #00ffcc; transition: width 0.1s linear; }
-        .swap-text { position: absolute; width: 100%; text-align: center; font-size: 1.1rem; line-height: 30px; color: #fff; font-weight: bold; z-index: 2; }
+        .swap-text { position: absolute; width: 100%; text-align: center; font-size: 1rem; line-height: 25px; color: #fff; z-index: 5; font-weight: bold; }
 
-        .progress-container { width: 100%; height: 10px; background: #111; }
-        #total-bar { height: 100%; width: 100%; background: var(--yellow); }
-
+        /* 모니터 */
         #room-view { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; padding: 15px; }
-        .monitor { border: 4px solid #333; display: flex; flex-direction: column; border-radius: 15px; position: relative; overflow: hidden; background: #111; transition: 0.3s; cursor: pointer; }
+        .monitor { border: 4px solid #333; display: flex; flex-direction: column; border-radius: 15px; position: relative; overflow: hidden; background: #111; transition: 0.3s; }
         .monitor.team-red { border-color: var(--red); background: var(--red-bg) !important; }
         .monitor.team-blue { border-color: var(--blue); background: var(--blue-bg) !important; }
-        .monitor.focused { position: fixed !important; top: 115px; left: 20px; right: 20px; bottom: 20px; z-index: 5000; cursor: default; }
+        .monitor.focused { position: fixed !important; top: 110px; left: 20px; right: 20px; bottom: 20px; z-index: 5000; }
 
-        .stats-layer { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding: 10px; background: rgba(0,0,0,0.85); border-bottom: 1px solid #444; }
+        /* 버튼 및 스탯 */
         .up-btn { width: 100%; font-family: 'DungGeunMo'; padding: 8px 0; background: #222; color: #aaa; border: 1px solid #444; border-radius: 6px; cursor: pointer; }
-        .up-btn i { font-size: 1.8rem; margin-bottom: 5px; } 
+        .up-btn i { font-size: 1.8rem; }
         .up-btn.ready { background: var(--yellow); color: #000; animation: blink 0.5s infinite; }
 
-        .board { display: grid; grid-template-columns: repeat(14, 1fr); grid-template-rows: repeat(5, 1fr); gap: 5px; flex: 1; padding: 15px; }
-        .card { background: rgba(255,255,255,0.05); border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #666; border-radius: 4px; transition: 0.2s; }
-        .card.owned-red { background: var(--red) !important; color: #fff; border-color: #fff; box-shadow: 0 0 10px var(--red); }
-        .card.owned-blue { background: var(--blue) !important; color: #fff; border-color: #fff; box-shadow: 0 0 10px var(--blue); }
+        .board { display: grid; grid-template-columns: repeat(14, 1fr); gap: 5px; flex: 1; padding: 15px; }
+        .card { background: rgba(255,255,255,0.05); border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #555; border-radius: 4px; }
+        .card.owned-red { background: var(--red) !important; color: #fff; }
+        .card.owned-blue { background: var(--blue) !important; color: #fff; }
+
+        /* 게이트 (시작 버튼 영역) */
+        .gate { position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 8000; display: none; align-items: center; justify-content: center; }
+        .gate-btn { padding: 25px 60px; font-family: 'DungGeunMo'; font-size: 2.5rem; background: var(--yellow); border: none; cursor: pointer; box-shadow: 0 0 30px var(--yellow); }
 
         .input-wrap { height: 85px; background: #000; border-top: 2px solid #333; display: flex; }
         .input-box { flex: 1; background: transparent; border: none; font-size: 3.5rem; text-align: center; outline: none; font-family: 'DungGeunMo'; color: #fff; }
 
-        .alert-layer { position: absolute; inset: 0; z-index: 9000; display: none; align-items: center; justify-content: center; background: rgba(255,0,0,0.9); }
-        .monitor.alert .alert-layer { display: flex; }
-
         #result-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; }
-        #chart-wrap { width: 600px; height: 600px; background: #0a0a0a; padding: 40px; border-radius: 30px; border: 2px solid #333; }
+        #chart-wrap { width: 550px; height: 550px; background: #000; padding: 30px; border: 1px solid #444; }
 
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     </style>
@@ -60,19 +57,18 @@
 <body>
 
 <div id="intro-gate">
-    <h1 style="color:var(--yellow); font-size:3.5rem; margin-bottom:30px;">NATION BUILDER : NEXT GEN</h1>
-    <button class="start-sys-btn" onclick="initSystem()">CONNECT TO SYSTEM</button>
+    <h1 style="color:var(--yellow); font-size:3rem; margin-bottom:20px;">NATION BUILDER v17.9</h1>
+    <button class="start-sys-btn" onclick="initSystem()">SYSTEM ON</button>
 </div>
 
 <div id="top-bar">
-    <div class="progress-container"><div id="total-bar"></div></div>
     <div id="timer-row">
         <div id="timer-disp">READY</div>
         <div class="swap-container">
             <div id="swap-bar"></div>
-            <div class="swap-text">ENCRYPTING TEAMS...</div>
+            <div class="swap-text">TEAM SWAP IN PROGRESS</div>
         </div>
-        <div style="width:200px; text-align:right; color:#888;">OS v17.8</div>
+        <div style="font-size: 1rem; color:#666;">LEGACY SYSTEM v17.9</div>
     </div>
 </div>
 
@@ -83,25 +79,22 @@
         for(let i=1; i<=4; i++) {
             document.write(`
                 <div class="monitor" id="mon-${i}" onclick="zoomIn(event, ${i})">
-                    <div class="alert-layer"><div style="font-size:5rem; border:10px double #fff; padding:30px;">WATCHING!</div></div>
-                    <div class="stats-layer">
+                    <div class="alert-layer" style="position:absolute; inset:0; z-index:9000; display:none; align-items:center; justify-content:center; background:rgba(255,0,0,0.95);"><div style="font-size:5rem; border:10px double #fff; padding:20px;">STOP!!</div></div>
+                    <div class="stats-layer" style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; padding:10px; background:rgba(0,0,0,0.8);">
                         ${cityList.map((c, idx) => `
                             <div class="stat-item" style="text-align:center;">
                                 <div style="font-size:0.8rem; color:#888;">${c}</div>
-                                <div class="count-val" id="cnt-${i}-${idx}" style="font-weight:bold; color:#00ffcc;">0/10</div>
+                                <div class="count-val" id="cnt-${i}-${idx}" style="color:#00ffcc; font-weight:bold;">0/10</div>
                                 <button class="up-btn" id="up-${i}-${idx}" onclick="requestUpgrade(event, ${i}, ${idx})">
                                     <i class="${icons[0]}"></i><br><span id="name-${i}-${idx}">LV.0</span>
                                 </button>
                             </div>
                         `).join('')}
                     </div>
-                    <div id="bonus-pop" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--yellow); color:#000; padding:20px 40px; font-size:2.5rem; display:none; z-index:7500; border:5px solid #fff; box-shadow:0 0 30px var(--yellow);"></div>
-                    <div class="gate" id="gate-${i}" style="position:absolute; inset:0; background:#000; z-index:8000; display:none; align-items:center; justify-content:center;">
-                        <button style="padding:20px 50px; font-family:'DungGeunMo'; font-size:2rem; background:var(--yellow); border:none; cursor:pointer;">START TERMINAL</button>
-                    </div>
+                    <div class="gate" id="gate-${i}"><button class="gate-btn" onclick="triggerStart(event, ${i})">LOGIN</button></div>
                     <div class="board" id="board-${i}"></div>
                     <div class="input-wrap">
-                        <input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" onclick="event.stopPropagation()" placeholder="READY..." disabled autocomplete="off">
+                        <input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" onclick="event.stopPropagation()" placeholder="..." disabled autocomplete="off">
                     </div>
                 </div>
             `);
@@ -110,9 +103,9 @@
 </div>
 
 <div id="result-screen">
-    <h1 style="color:var(--yellow); font-size:3rem; margin-bottom:20px;">ROUND RESULT</h1>
+    <h1 style="color:var(--yellow); font-size:3rem; margin-bottom:20px;">MISSION REPORT</h1>
     <div id="chart-wrap"><canvas id="radarChart"></canvas></div>
-    <button onclick="nextRound()" style="margin-top:30px; padding:15px 60px; font-family:'DungGeunMo'; background:var(--yellow); border:none; cursor:pointer; font-size:1.5rem;">CONTINUE TO NEXT ROUND</button>
+    <button onclick="nextRound()" style="margin-top:30px; padding:15px 60px; font-family:'DungGeunMo'; background:var(--yellow); border:none; cursor:pointer; font-size:1.5rem;">CONTINUE NEXT ROUND</button>
 </div>
 
 <script>
@@ -124,31 +117,38 @@
         '지혜': ['교육','의료','대학','훈련','연구','백신','임상','장학','인재','교수','의사','도서관','백과','멘토']
     };
 
-    let pCards = {}, active = false, isAlert = false, bonusWord = "";
+    let pCards = {}, active = false, isAlert = false;
     let cityLevels = { red: [0,0,0,0,0], blue: [0,0,0,0,0] }; 
     let currentTeams = { 1:'red', 2:'red', 3:'blue', 4:'blue' };
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v17_8');
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v17_9');
 
     function initSystem() { document.getElementById('intro-gate').style.display = 'none'; }
 
     function zoomIn(e, id) {
-        if(e.target.tagName === 'INPUT' || e.target.closest('.up-btn') || e.target.closest('.gate')) return;
+        // 입력창, 버튼, 혹은 게이트 위를 클릭하면 줌 함수 실행 안함
+        if(e.target.tagName === 'INPUT' || e.target.closest('.up-btn') || e.target.closest('.gate-btn')) return;
+        
         document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
         document.getElementById(`mon-${id}`).classList.add('focused');
-        if(document.getElementById(`in-${id}`).disabled) document.getElementById(`gate-${id}`).style.display = 'flex';
+        
+        // 아직 입력창이 비활성화 상태면 시작 버튼(게이트) 보임
+        if(document.getElementById(`in-${id}`).disabled) {
+            document.getElementById(`gate-${id}`).style.display = 'flex';
+        }
     }
 
     function triggerStart(e, id) {
-        e.stopPropagation();
+        e.preventDefault(); 
+        e.stopPropagation(); // 부모 .monitor의 zoomIn 클릭 이벤트 전파 차단
+        
         document.getElementById(`gate-${id}`).style.display = 'none';
         document.getElementById(`in-${id}`).disabled = false;
         document.getElementById(`in-${id}`).focus();
-        // 라운드 시작 시 중립으로 초기화 (하지만 레벨은 유지됨)
-        db.update({ state: 'START', bonus: "", words: shuffle(Object.values(cityMap).flat()) });
-        db.child('cards').remove(); 
+        
+        // Firebase에 시작 신호 및 보드 초기화
+        db.update({ state: 'START', words: Object.values(cityMap).flat() });
+        db.child('cards').remove(); // 보드 초기화 (중립화)
     }
-
-    function shuffle(array) { return array.sort(() => Math.random() - 0.5); }
 
     db.on('value', snap => {
         const d = snap.val(); if(!d) return;
@@ -156,14 +156,13 @@
         if(d.words) initBoard(d.words);
         if(d.teams) currentTeams = d.teams;
         pCards = d.cards || {};
-        bonusWord = d.bonus || "";
         updateUI();
     });
 
     function initBoard(words) {
         for(let i=1; i<=4; i++) {
             const b = document.getElementById(`board-${i}`);
-            b.innerHTML = ""; // 보드 비우기 (중립화)
+            b.innerHTML = "";
             words.forEach(w => {
                 const div = document.createElement('div');
                 div.className = 'card'; div.id = `card-${i}-${w}`; div.innerText = w;
@@ -174,19 +173,9 @@
 
     function handleInput(e, id) {
         const team = currentTeams[id];
-        if(isAlert) {
-            const mine = Object.keys(pCards).filter(k => pCards[k] === team);
-            if(mine.length > 0) db.child('cards').child(mine[Math.floor(Math.random()*mine.length)]).remove();
-            e.target.value = ""; return;
-        }
         if(e.key === 'Enter') {
             const val = e.target.value.trim();
-            if(val === bonusWord && bonusWord !== "") {
-                const enemy = (team === 'red') ? 'blue' : 'red';
-                const eCards = Object.keys(pCards).filter(k => pCards[k] === enemy);
-                eCards.slice(0, 3).forEach(k => db.child('cards').child(k).set(team));
-                db.update({ bonus: "" });
-            } else if(Object.values(cityMap).flat().includes(val)) {
+            if(Object.values(cityMap).flat().includes(val)) {
                 db.child('cards').child(val).set(team);
             }
             e.target.value = "";
@@ -209,28 +198,24 @@
         for(let i=1; i<=4; i++) {
             const t = currentTeams[i];
             const mon = document.getElementById(`mon-${i}`);
-            mon.className = `monitor team-${t} ${mon.classList.contains('focused')?'focused':''} ${isAlert?'alert':''}`;
+            mon.className = `monitor team-${t} ${mon.classList.contains('focused')?'focused':''}`;
             cityList.forEach((_, idx) => {
                 const s = counts[t][idx]; const l = cityLevels[t][idx];
                 document.getElementById(`cnt-${i}-${idx}`).innerText = `${s}/${(l+1)*10}`;
                 const btn = document.getElementById(`up-${i}-${idx}`);
-                const ready = s >= (l+1)*10 && l < 5;
-                btn.classList.toggle('ready', ready);
+                btn.classList.toggle('ready', s >= (l+1)*10 && l < 5);
                 btn.querySelector('i').className = icons[l];
                 btn.querySelector('span').innerText = `LV.${l}`;
             });
-            const bp = mon.querySelector('#bonus-pop');
-            if(bonusWord) { bp.style.display='block'; bp.innerText=`BONUS: ${bonusWord}`; } else { bp.style.display='none'; }
         }
     }
 
     function requestUpgrade(e, id, idx) {
         e.stopPropagation();
         const t = currentTeams[id];
-        const curCount = Object.keys(pCards).filter(k => cityMap[cityList[idx]].includes(k) && pCards[k] === t).length;
-        if(curCount >= (cityLevels[t][idx]+1)*10 && cityLevels[t][idx] < 5) {
-            cityLevels[t][idx]++;
-            updateUI();
+        const s = Object.keys(pCards).filter(k => cityMap[cityList[idx]].includes(k) && pCards[k] === t).length;
+        if(s >= (cityLevels[t][idx]+1)*10 && cityLevels[t][idx] < 5) {
+            cityLevels[t][idx]++; updateUI();
         }
     }
 
@@ -238,27 +223,13 @@
         let time = 1200;
         const intr = setInterval(() => {
             time--;
-            document.getElementById('total-bar').style.width = (time/1200)*100 + "%";
             document.getElementById('timer-disp').innerText = (time/10).toFixed(1) + "s";
-            
-            const swapProgress = (time % 100);
-            document.getElementById('swap-bar').style.width = (swapProgress) + "%";
-            document.getElementById('swap-bar').style.background = swapProgress < 30 ? "#ff0000" : "#00ffcc";
+            document.getElementById('swap-bar').style.width = (time % 100) + "%";
 
             if(time % 100 === 0 && time > 0) {
                 const ts = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
                 db.update({ teams: { 1:ts[0], 2:ts[1], 3:ts[2], 4:ts[3] } });
             }
-
-            const alertCycle = time % 300;
-            isAlert = (alertCycle < 20 && alertCycle > 0);
-
-            if(time % 200 === 100) {
-                const all = Object.values(cityMap).flat();
-                db.update({ bonus: all[Math.floor(Math.random()*all.length)] });
-            }
-            if(time % 200 === 160) db.update({ bonus: "" });
-
             if(time <= 0) { clearInterval(intr); showResult(); }
         }, 100);
     }
@@ -271,24 +242,18 @@
             data: {
                 labels: cityList,
                 datasets: [
-                    { label: 'RED TEAM', data: cityLevels.red, backgroundColor: 'rgba(255,0,0,0.5)', borderColor: 'red', borderWidth: 4, pointRadius: 6 },
-                    { label: 'BLUE TEAM', data: cityLevels.blue, backgroundColor: 'rgba(0,0,255,0.5)', borderColor: 'blue', borderWidth: 4, pointRadius: 6 }
+                    { label: 'RED TEAM', data: cityLevels.red, backgroundColor: 'rgba(255,0,0,0.5)', borderColor: 'red', borderWidth: 3 },
+                    { label: 'BLUE TEAM', data: cityLevels.blue, backgroundColor: 'rgba(0,0,255,0.5)', borderColor: 'blue', borderWidth: 3 }
                 ]
             },
-            options: {
-                scales: { r: { min: 0, max: 5, grid: { color: '#444' }, angleLines: { color: '#444' }, ticks: { display: false, stepSize: 1 } } },
-                plugins: { legend: { labels: { color: '#fff', font: { family: 'DungGeunMo', size: 20 } } } }
-            }
+            options: { scales: { r: { min: 0, max: 5, grid: { color: '#333' }, ticks: { display: false } } } }
         });
     }
 
     function nextRound() {
-        // Firebase 상태 초기화 후 다음 라운드 준비 (레벨은 유지됨)
         db.update({ state: 'READY' });
         active = false;
         document.getElementById('result-screen').style.display = 'none';
-        document.getElementById('timer-disp').innerText = "READY";
-        // 모든 입력창 다시 잠금
         for(let i=1; i<=4; i++) {
             document.getElementById(`in-${i}`).disabled = true;
             document.getElementById(`gate-${i}`).style.display = 'flex';
