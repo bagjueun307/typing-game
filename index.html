@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>NATION BUILDER v17.9 - Final Fix</title>
+    <title>NATION BUILDER v18.0 - Perfect Cycle</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
@@ -11,64 +11,44 @@
     <style>
         :root { --dark: #050505; --red: #FF0000; --blue: #0000FF; --red-bg: #300000; --blue-bg: #000030; --yellow: #ffea00; }
         body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', monospace; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
-        
-        /* 인트로 */
         #intro-gate { position: fixed; inset: 0; background: #000; z-index: 20000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .start-sys-btn { padding: 20px 60px; font-size: 2rem; background: var(--yellow); border: none; cursor: pointer; border-radius: 10px; font-family: 'DungGeunMo'; }
-
-        /* 상단 바 */
         #top-bar { height: 100px; background: #000; border-bottom: 2px solid #333; z-index: 1000; }
         #timer-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 25px; }
         #timer-disp { font-size: 2.8rem; color: var(--yellow); min-width: 150px; }
         .swap-container { width: 350px; height: 25px; background: #222; border: 2px solid #444; position: relative; overflow: hidden; }
         #swap-bar { height: 100%; width: 100%; background: #00ffcc; transition: width 0.1s linear; }
         .swap-text { position: absolute; width: 100%; text-align: center; font-size: 1rem; line-height: 25px; color: #fff; z-index: 5; font-weight: bold; }
-
-        /* 모니터 */
         #room-view { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; padding: 15px; }
         .monitor { border: 4px solid #333; display: flex; flex-direction: column; border-radius: 15px; position: relative; overflow: hidden; background: #111; transition: 0.3s; }
         .monitor.team-red { border-color: var(--red); background: var(--red-bg) !important; }
         .monitor.team-blue { border-color: var(--blue); background: var(--blue-bg) !important; }
         .monitor.focused { position: fixed !important; top: 110px; left: 20px; right: 20px; bottom: 20px; z-index: 5000; }
-
-        /* 버튼 및 스탯 */
         .up-btn { width: 100%; font-family: 'DungGeunMo'; padding: 8px 0; background: #222; color: #aaa; border: 1px solid #444; border-radius: 6px; cursor: pointer; }
         .up-btn i { font-size: 1.8rem; }
         .up-btn.ready { background: var(--yellow); color: #000; animation: blink 0.5s infinite; }
-
         .board { display: grid; grid-template-columns: repeat(14, 1fr); gap: 5px; flex: 1; padding: 15px; }
         .card { background: rgba(255,255,255,0.05); border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #555; border-radius: 4px; }
-        .card.owned-red { background: var(--red) !important; color: #fff; }
-        .card.owned-blue { background: var(--blue) !important; color: #fff; }
-
-        /* 게이트 (시작 버튼 영역) */
-        .gate { position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 8000; display: none; align-items: center; justify-content: center; }
-        .gate-btn { padding: 25px 60px; font-family: 'DungGeunMo'; font-size: 2.5rem; background: var(--yellow); border: none; cursor: pointer; box-shadow: 0 0 30px var(--yellow); }
-
+        .card.owned-red { background: var(--red) !important; color: #fff; box-shadow: 0 0 5px #fff; }
+        .card.owned-blue { background: var(--blue) !important; color: #fff; box-shadow: 0 0 5px #fff; }
+        .gate { position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 8000; display: none; align-items: center; justify-content: center; }
+        .gate-btn { padding: 25px 60px; font-family: 'DungGeunMo'; font-size: 2.5rem; background: var(--yellow); border: none; cursor: pointer; }
         .input-wrap { height: 85px; background: #000; border-top: 2px solid #333; display: flex; }
         .input-box { flex: 1; background: transparent; border: none; font-size: 3.5rem; text-align: center; outline: none; font-family: 'DungGeunMo'; color: #fff; }
-
         #result-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; }
         #chart-wrap { width: 550px; height: 550px; background: #000; padding: 30px; border: 1px solid #444; }
-
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     </style>
 </head>
 <body>
 
-<div id="intro-gate">
-    <h1 style="color:var(--yellow); font-size:3rem; margin-bottom:20px;">NATION BUILDER v17.9</h1>
-    <button class="start-sys-btn" onclick="initSystem()">SYSTEM ON</button>
-</div>
+<div id="intro-gate"><button class="start-sys-btn" onclick="initSystem()">INITIALIZE CONNECTION</button></div>
 
 <div id="top-bar">
     <div id="timer-row">
         <div id="timer-disp">READY</div>
-        <div class="swap-container">
-            <div id="swap-bar"></div>
-            <div class="swap-text">TEAM SWAP IN PROGRESS</div>
-        </div>
-        <div style="font-size: 1rem; color:#666;">LEGACY SYSTEM v17.9</div>
+        <div class="swap-container"><div id="swap-bar"></div><div class="swap-text">TEAM SWAP SYSTEM</div></div>
+        <div style="font-size: 1rem; color:var(--yellow);">QUEST v18.0</div>
     </div>
 </div>
 
@@ -79,7 +59,7 @@
         for(let i=1; i<=4; i++) {
             document.write(`
                 <div class="monitor" id="mon-${i}" onclick="zoomIn(event, ${i})">
-                    <div class="alert-layer" style="position:absolute; inset:0; z-index:9000; display:none; align-items:center; justify-content:center; background:rgba(255,0,0,0.95);"><div style="font-size:5rem; border:10px double #fff; padding:20px;">STOP!!</div></div>
+                    <div class="alert-layer" id="alert-${i}" style="position:absolute; inset:0; z-index:9000; display:none; align-items:center; justify-content:center; background:rgba(255,0,0,0.95);"><div style="font-size:5rem; border:10px double #fff; padding:20px; animation:blink 0.2s infinite;">WATCHING!!</div></div>
                     <div class="stats-layer" style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; padding:10px; background:rgba(0,0,0,0.8);">
                         ${cityList.map((c, idx) => `
                             <div class="stat-item" style="text-align:center;">
@@ -91,6 +71,7 @@
                             </div>
                         `).join('')}
                     </div>
+                    <div id="bonus-pop-${i}" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--yellow); color:#000; padding:20px 40px; font-size:2.5rem; display:none; z-index:7500; border:5px solid #fff;"></div>
                     <div class="gate" id="gate-${i}"><button class="gate-btn" onclick="triggerStart(event, ${i})">LOGIN</button></div>
                     <div class="board" id="board-${i}"></div>
                     <div class="input-wrap">
@@ -105,7 +86,7 @@
 <div id="result-screen">
     <h1 style="color:var(--yellow); font-size:3rem; margin-bottom:20px;">MISSION REPORT</h1>
     <div id="chart-wrap"><canvas id="radarChart"></canvas></div>
-    <button onclick="nextRound()" style="margin-top:30px; padding:15px 60px; font-family:'DungGeunMo'; background:var(--yellow); border:none; cursor:pointer; font-size:1.5rem;">CONTINUE NEXT ROUND</button>
+    <button onclick="nextRound()" style="margin-top:30px; padding:15px 60px; font-family:'DungGeunMo'; background:var(--yellow); border:none; cursor:pointer; font-size:1.5rem;">NEXT ROUND</button>
 </div>
 
 <script>
@@ -117,52 +98,49 @@
         '지혜': ['교육','의료','대학','훈련','연구','백신','임상','장학','인재','교수','의사','도서관','백과','멘토']
     };
 
-    let pCards = {}, active = false, isAlert = false;
+    let pCards = {}, active = false, isAlert = false, bonusWord = "";
     let cityLevels = { red: [0,0,0,0,0], blue: [0,0,0,0,0] }; 
     let currentTeams = { 1:'red', 2:'red', 3:'blue', 4:'blue' };
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v17_9');
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v18_0');
 
     function initSystem() { document.getElementById('intro-gate').style.display = 'none'; }
 
     function zoomIn(e, id) {
-        // 입력창, 버튼, 혹은 게이트 위를 클릭하면 줌 함수 실행 안함
         if(e.target.tagName === 'INPUT' || e.target.closest('.up-btn') || e.target.closest('.gate-btn')) return;
-        
         document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
         document.getElementById(`mon-${id}`).classList.add('focused');
-        
-        // 아직 입력창이 비활성화 상태면 시작 버튼(게이트) 보임
-        if(document.getElementById(`in-${id}`).disabled) {
+        if(document.getElementById(`in-${id}`).disabled && !active) {
             document.getElementById(`gate-${id}`).style.display = 'flex';
         }
     }
 
     function triggerStart(e, id) {
-        e.preventDefault(); 
-        e.stopPropagation(); // 부모 .monitor의 zoomIn 클릭 이벤트 전파 차단
-        
-        document.getElementById(`gate-${id}`).style.display = 'none';
-        document.getElementById(`in-${id}`).disabled = false;
-        document.getElementById(`in-${id}`).focus();
-        
-        // Firebase에 시작 신호 및 보드 초기화
+        e.preventDefault(); e.stopPropagation();
         db.update({ state: 'START', words: Object.values(cityMap).flat() });
-        db.child('cards').remove(); // 보드 초기화 (중립화)
+        db.child('cards').remove();
     }
 
     db.on('value', snap => {
         const d = snap.val(); if(!d) return;
-        if(d.state === 'START' && !active) { active = true; startTimer(); }
+        if(d.state === 'START' && !active) { 
+            active = true; 
+            startTimer(); 
+            // 누군가 시작하면 모든 게이트 숨김
+            document.querySelectorAll('.gate').forEach(g => g.style.display = 'none');
+            document.querySelectorAll('.input-box').forEach(inp => inp.disabled = false);
+        }
         if(d.words) initBoard(d.words);
         if(d.teams) currentTeams = d.teams;
         pCards = d.cards || {};
+        bonusWord = d.bonus || "";
+        isAlert = d.alertMode || false;
         updateUI();
     });
 
     function initBoard(words) {
         for(let i=1; i<=4; i++) {
             const b = document.getElementById(`board-${i}`);
-            b.innerHTML = "";
+            if(b.children.length > 0) continue;
             words.forEach(w => {
                 const div = document.createElement('div');
                 div.className = 'card'; div.id = `card-${i}-${w}`; div.innerText = w;
@@ -175,7 +153,19 @@
         const team = currentTeams[id];
         if(e.key === 'Enter') {
             const val = e.target.value.trim();
-            if(Object.values(cityMap).flat().includes(val)) {
+            // 1. 감시 모드 페널티 (2장 삭제)
+            if(isAlert) {
+                const mine = Object.keys(pCards).filter(k => pCards[k] === team);
+                mine.slice(0, 2).forEach(k => db.child('cards').child(k).remove());
+                e.target.value = ""; return;
+            }
+            // 2. 보너스 퀴즈 (상대 3장 뺏기)
+            if(val === bonusWord && bonusWord !== "") {
+                const enemy = (team === 'red') ? 'blue' : 'red';
+                const eCards = Object.keys(pCards).filter(k => pCards[k] === enemy);
+                eCards.slice(0, 3).forEach(k => db.child('cards').child(k).set(team));
+                db.update({ bonus: "" });
+            } else if(Object.values(cityMap).flat().includes(val)) {
                 db.child('cards').child(val).set(team);
             }
             e.target.value = "";
@@ -194,11 +184,22 @@
                 if(card) card.className = `card owned-${t}`;
             }
         });
+        // 점유 안 된 카드 초기화
+        const allWords = Object.values(cityMap).flat();
+        allWords.forEach(w => {
+            if(!pCards[w]) {
+                for(let i=1; i<=4; i++) {
+                    const card = document.getElementById(`card-${i}-${w}`);
+                    if(card) card.className = `card`;
+                }
+            }
+        });
 
         for(let i=1; i<=4; i++) {
             const t = currentTeams[i];
             const mon = document.getElementById(`mon-${i}`);
             mon.className = `monitor team-${t} ${mon.classList.contains('focused')?'focused':''}`;
+            document.getElementById(`alert-${i}`).style.display = isAlert ? 'flex' : 'none';
             cityList.forEach((_, idx) => {
                 const s = counts[t][idx]; const l = cityLevels[t][idx];
                 document.getElementById(`cnt-${i}-${idx}`).innerText = `${s}/${(l+1)*10}`;
@@ -207,6 +208,8 @@
                 btn.querySelector('i').className = icons[l];
                 btn.querySelector('span').innerText = `LV.${l}`;
             });
+            const bp = document.getElementById(`bonus-pop-${i}`);
+            if(bonusWord) { bp.style.display='block'; bp.innerText=`BONUS: ${bonusWord}`; } else { bp.style.display='none'; }
         }
     }
 
@@ -214,9 +217,7 @@
         e.stopPropagation();
         const t = currentTeams[id];
         const s = Object.keys(pCards).filter(k => cityMap[cityList[idx]].includes(k) && pCards[k] === t).length;
-        if(s >= (cityLevels[t][idx]+1)*10 && cityLevels[t][idx] < 5) {
-            cityLevels[t][idx]++; updateUI();
-        }
+        if(s >= (cityLevels[t][idx]+1)*10 && cityLevels[t][idx] < 5) { cityLevels[t][idx]++; updateUI(); }
     }
 
     function startTimer() {
@@ -225,6 +226,17 @@
             time--;
             document.getElementById('timer-disp').innerText = (time/10).toFixed(1) + "s";
             document.getElementById('swap-bar').style.width = (time % 100) + "%";
+
+            // [핵심] 보너스 문제 (20초 주기 = 200단위)
+            if(time % 200 === 180) {
+                const all = Object.values(cityMap).flat();
+                db.update({ bonus: all[Math.floor(Math.random()*all.length)] });
+            }
+            if(time % 200 === 0) db.update({ bonus: "" });
+
+            // [핵심] 감시 모드 (28초 주기 = 280단위, 2초간 유지)
+            if(time % 280 === 20) db.update({ alertMode: true });
+            if(time % 280 === 0) db.update({ alertMode: false });
 
             if(time % 100 === 0 && time > 0) {
                 const ts = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
@@ -251,13 +263,12 @@
     }
 
     function nextRound() {
-        db.update({ state: 'READY' });
+        db.update({ state: 'READY', alertMode: false, bonus: "" });
         active = false;
         document.getElementById('result-screen').style.display = 'none';
-        for(let i=1; i<=4; i++) {
-            document.getElementById(`in-${i}`).disabled = true;
-            document.getElementById(`gate-${i}`).style.display = 'flex';
-        }
+        document.querySelectorAll('.input-box').forEach(inp => { inp.disabled = true; inp.value = ""; });
+        document.querySelectorAll('.gate').forEach(g => g.style.display = 'none');
+        document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
     }
 </script>
 </body>
