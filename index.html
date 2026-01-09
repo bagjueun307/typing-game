@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>NATION BUILDER v17.5 - Final Visual Report</title>
+    <title>NATION BUILDER v17.6 - Final Fix</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
@@ -11,51 +11,48 @@
     <style>
         :root { 
             --dark: #050505; --red: #FF0000; --blue: #0000FF; 
-            --red-bg: #400000; --blue-bg: #000040; --yellow: #ffea00;
+            --red-bg: #330000; --blue-bg: #000033; --yellow: #ffea00;
         }
         body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', monospace; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
         /* 인트로 대문 */
-        #intro-gate { position: fixed; inset: 0; background: #000; z-index: 20000; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 10px double #333; }
-        #intro-gate h1 { font-size: 4rem; color: var(--yellow); margin-bottom: 2rem; text-shadow: 0 0 20px var(--yellow); }
-        .start-sys-btn { padding: 20px 60px; font-family: 'DungGeunMo'; font-size: 2rem; background: var(--yellow); border: none; cursor: pointer; border-radius: 10px; box-shadow: 0 0 30px var(--yellow); transition: 0.3s; }
+        #intro-gate { position: fixed; inset: 0; background: #000; z-index: 20000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .start-sys-btn { padding: 20px 60px; font-family: 'DungGeunMo'; font-size: 2rem; background: var(--yellow); border: none; cursor: pointer; border-radius: 10px; }
 
         /* 상단 바 */
-        #top-bar { height: 85px; background: #000; border-bottom: 2px solid #333; display: flex; flex-direction: column; z-index: 1000; }
-        #timer-row { display: flex; justify-content: space-between; align-items: center; padding: 0 25px; flex: 1; }
+        #top-bar { height: 85px; background: #000; border-bottom: 2px solid #333; z-index: 1000; }
+        #timer-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 25px; }
         #timer-disp { font-size: 2.2rem; color: var(--yellow); }
         .progress-container { width: 100%; height: 8px; background: #222; }
-        #total-bar { height: 100%; width: 100%; background: var(--yellow); box-shadow: 0 0 10px var(--yellow); }
+        #total-bar { height: 100%; width: 100%; background: var(--yellow); }
 
         /* 모니터 */
         #room-view { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; padding: 15px; }
-        .monitor { border: 4px solid #333; display: flex; flex-direction: column; border-radius: 15px; position: relative; overflow: hidden; background: #111; transition: background 0.5s; cursor: pointer; }
+        .monitor { border: 4px solid #333; display: flex; flex-direction: column; border-radius: 15px; position: relative; overflow: hidden; background: #111; transition: 0.3s; cursor: pointer; }
         .monitor.team-red { border-color: var(--red); background: var(--red-bg) !important; }
         .monitor.team-blue { border-color: var(--blue); background: var(--blue-bg) !important; }
         .monitor.focused { position: fixed !important; top: 100px; left: 20px; right: 20px; bottom: 20px; z-index: 5000; cursor: default; }
 
-        /* 업그레이드 영역 */
-        .stats-layer { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding: 10px; background: rgba(0,0,0,0.8); border-bottom: 2px solid rgba(255,255,255,0.1); }
-        .stat-item { text-align: center; }
-        .count-val { font-size: 1.1rem; color: #00ffcc; font-weight: bold; }
+        /* 스탯 및 아이콘 */
+        .stats-layer { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding: 10px; background: rgba(0,0,0,0.8); }
         .up-btn { width: 100%; font-family: 'DungGeunMo'; padding: 8px 0; background: #222; color: #aaa; border: 1px solid #444; border-radius: 6px; cursor: pointer; }
-        .up-btn i { font-size: 1.6rem; margin-bottom: 4px; } /* 아이콘 크기 확대 */
+        .up-btn i { font-size: 1.8rem; margin-bottom: 5px; } /* 아이콘 크기 키움 */
         .up-btn.ready { background: var(--yellow); color: #000; animation: blink 0.5s infinite; }
 
         /* 입력창 */
         .input-wrap { height: 80px; background: rgba(0,0,0,0.9); border-top: 2px solid #333; display: flex; }
-        .monitor.team-red .input-box { color: #ff3333; text-shadow: 0 0 15px var(--red); }
-        .monitor.team-blue .input-box { color: #3333ff; text-shadow: 0 0 15px var(--blue); }
+        .monitor.team-red .input-box { color: var(--red); text-shadow: 0 0 15px var(--red); }
+        .monitor.team-blue .input-box { color: var(--blue); text-shadow: 0 0 15px var(--blue); }
         .input-box { flex: 1; background: transparent; border: none; font-size: 3.5rem; text-align: center; outline: none; font-family: 'DungGeunMo'; }
 
-        /* 오각형 결과창 전용 스타일 */
-        #result-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; }
-        #chart-wrap { width: 550px; height: 550px; background: #111; border: 2px solid #444; padding: 40px; border-radius: 30px; box-shadow: 0 0 50px rgba(0,0,0,1); }
-        #result-title { font-size: 3.5rem; color: var(--yellow); margin-bottom: 20px; text-shadow: 0 0 20px var(--yellow); }
-
-        .gate { position: absolute; inset: 0; background: #000; z-index: 8000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .alert-layer { position: absolute; inset: 0; z-index: 6000; display: none; align-items: center; justify-content: center; background: rgba(255,0,0,0.9); }
+        /* 게이트 및 알림 */
+        .gate { position: absolute; inset: 0; background: #000; z-index: 8000; display: flex; align-items: center; justify-content: center; }
+        .gate-btn { padding: 20px 40px; font-family: 'DungGeunMo'; font-size: 2rem; background: var(--yellow); cursor: pointer; border: none; }
+        .alert-layer { position: absolute; inset: 0; z-index: 9000; display: none; align-items: center; justify-content: center; background: rgba(255,0,0,0.9); }
         .monitor.alert .alert-layer { display: flex; }
+
+        #result-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        #chart-wrap { width: 500px; height: 500px; background: #000; padding: 30px; border: 1px solid #444; }
 
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
     </style>
@@ -63,15 +60,15 @@
 <body>
 
 <div id="intro-gate">
-    <h1>NATION BUILDER : SYSTEM</h1>
-    <button class="start-sys-btn" onclick="initSystem()">INITIALIZE ACCESS</button>
+    <h1 style="color:var(--yellow); font-size:3rem; margin-bottom:20px;">NATION BUILDER v17.6</h1>
+    <button class="start-sys-btn" onclick="initSystem()">START SYSTEM</button>
 </div>
 
 <div id="top-bar">
     <div class="progress-container"><div id="total-bar"></div></div>
     <div id="timer-row">
         <div id="timer-disp">READY</div>
-        <div style="font-size: 1.2rem; color:#888;">SWAP IN: <span id="swap-sec" style="color:#fff">10</span>s</div>
+        <div style="font-size: 1.2rem;">SWAP: <span id="swap-sec">10</span>s</div>
     </div>
 </div>
 
@@ -79,28 +76,25 @@
     <script>
         const cityList = ['발전','강철','자본','미래','지혜'];
         const icons = ["fas fa-spider", "fas fa-home", "fas fa-gun", "fas fa-chess-rook", "fas fa-globe", "fas fa-crown"];
-        const steps = ["SETUP", "HIDEOUT", "ARSENAL", "FORTRESS", "NETWORK", "DOMINATE"];
         for(let i=1; i<=4; i++) {
             document.write(`
                 <div class="monitor" id="mon-${i}" onclick="zoomIn(event, ${i})">
-                    <div class="alert-layer"><div style="font-size:5rem; border:10px double #fff; padding:20px;">WATCHING!</div></div>
+                    <div class="alert-layer"><div style="font-size:4rem; border:10px double #fff; padding:20px;">WATCHING!</div></div>
                     <div class="stats-layer">
                         ${cityList.map((c, idx) => `
                             <div class="stat-item">
                                 <div style="font-size:0.8rem; color:#ccc;">${c}</div>
                                 <div class="count-val" id="cnt-${i}-${idx}">0/10</div>
                                 <button class="up-btn" id="up-${i}-${idx}" onclick="requestUpgrade(event, ${i}, ${idx})">
-                                    <i class="${icons[0]}"></i><br><span id="name-${i}-${idx}">SETUP</span>
+                                    <i class="${icons[0]}"></i><br><span id="name-${i}-${idx}">LV.0</span>
                                 </button>
                             </div>
                         `).join('')}
                     </div>
-                    <div id="bonus-pop" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--yellow); color:#000; padding:20px; font-size:2rem; display:none; border:4px solid #fff; z-index:7000;">BONUS!</div>
-                    <div class="gate" id="gate-${i}" style="display:none;"><button style="padding:15px 30px; font-family:'DungGeunMo'; font-size:1.5rem; background:var(--yellow); border:none; cursor:pointer;">CONNECT TERMINAL</button></div>
-                    <div class="board" id="board-${i}" style="display:grid; grid-template-columns:repeat(14,1fr); grid-template-rows:repeat(5,1fr); gap:5px; flex:1; padding:15px;"></div>
-                    <div class="input-wrap">
-                        <input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" onclick="event.stopPropagation()" placeholder="..." disabled autocomplete="off">
-                    </div>
+                    <div id="bonus-pop" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--yellow); color:#000; padding:20px; font-size:2rem; display:none; z-index:7500; border:4px solid #fff;"></div>
+                    <div class="gate" id="gate-${i}" style="display:none;"><button class="gate-btn" onclick="triggerStart(event, ${i})">LOGIN</button></div>
+                    <div class="board" id="board-${i}" style="display:grid; grid-template-columns:repeat(14,1fr); grid-template-rows:repeat(5,1fr); gap:5px; flex:1; padding:10px;"></div>
+                    <div class="input-wrap"><input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" onclick="event.stopPropagation()" placeholder="..." disabled autocomplete="off"></div>
                 </div>
             `);
         }
@@ -108,9 +102,9 @@
 </div>
 
 <div id="result-screen">
-    <div id="result-title">FINAL MISSION REPORT</div>
+    <h1 id="res-title" style="color:var(--yellow); font-size:2.5rem; margin-bottom:15px;">MISSION COMPLETE</h1>
     <div id="chart-wrap"><canvas id="radarChart"></canvas></div>
-    <button onclick="location.reload()" style="margin-top:30px; padding:15px 40px; font-family:'DungGeunMo'; cursor:pointer; background:var(--yellow); border:none; font-size:1.5rem;">NEXT ROUND</button>
+    <button onclick="location.reload()" style="margin-top:20px; padding:15px 40px; font-family:'DungGeunMo'; background:var(--yellow); border:none; cursor:pointer;">NEXT ROUND</button>
 </div>
 
 <script>
@@ -125,15 +119,14 @@
     let pCards = {}, active = false, isAlert = false, bonusWord = "";
     let cityLevels = { red: [0,0,0,0,0], blue: [0,0,0,0,0] }; 
     let currentTeams = { 1:'red', 2:'red', 3:'blue', 4:'blue' };
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v17_5');
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v17_6');
 
     function initSystem() { document.getElementById('intro-gate').style.display = 'none'; }
 
     function zoomIn(e, id) {
-        if(e.target.tagName === 'INPUT' || e.target.closest('.up-btn')) return;
+        if(e.target.tagName === 'INPUT' || e.target.closest('.up-btn') || e.target.closest('.gate-btn')) return;
         document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
-        const target = document.getElementById(`mon-${id}`);
-        target.classList.add('focused');
+        document.getElementById(`mon-${id}`).classList.add('focused');
         const inp = document.getElementById(`in-${id}`);
         if(inp.disabled) document.getElementById(`gate-${id}`).style.display = 'flex';
     }
@@ -141,8 +134,10 @@
     function triggerStart(e, id) {
         e.stopPropagation();
         document.getElementById(`gate-${id}`).style.display = 'none';
-        const inp = document.getElementById(`in-${id}`); inp.disabled = false; inp.focus();
-        if(!active) db.update({ state: 'START', words: Object.values(cityMap).flat() });
+        document.getElementById(`in-${id}`).disabled = false;
+        document.getElementById(`in-${id}`).focus();
+        // Firebase에 시작 신호 보내기 (이미 시작되었어도 안전하게 덮어씀)
+        db.update({ state: 'START', words: Object.values(cityMap).flat() });
     }
 
     db.on('value', snap => {
@@ -216,7 +211,7 @@
                 const ready = s >= (l+1)*10 && l < 5;
                 btn.classList.toggle('ready', ready);
                 btn.querySelector('i').className = icons[l];
-                document.getElementById(`name-${i}-${idx}`).innerText = ready ? "UPGRADE!" : steps[l];
+                btn.querySelector('span').innerText = `LV.${l}`;
             });
             const bp = mon.querySelector('#bonus-pop');
             if(bonusWord) { bp.style.display='block'; bp.innerText=`BONUS: ${bonusWord}`; } else { bp.style.display='none'; }
@@ -226,8 +221,11 @@
     function requestUpgrade(e, id, idx) {
         e.stopPropagation();
         const t = currentTeams[id];
-        const s = Object.keys(pCards).filter(k => cityMap[cityList[idx]].includes(k) && pCards[k] === t).length;
-        if(s >= (cityLevels[t][idx]+1)*10 && cityLevels[t][idx] < 5) { cityLevels[t][idx]++; updateUI(); }
+        const currentCount = Object.keys(pCards).filter(k => cityMap[cityList[idx]].includes(k) && pCards[k] === t).length;
+        if(currentCount >= (cityLevels[t][idx]+1)*10 && cityLevels[t][idx] < 5) {
+            cityLevels[t][idx]++;
+            updateUI();
+        }
     }
 
     function startTimer() {
@@ -264,13 +262,13 @@
             data: {
                 labels: cityList,
                 datasets: [
-                    { label: 'RED SYNDICATE', data: cityLevels.red, backgroundColor: 'rgba(255,0,0,0.4)', borderColor: 'red', borderWidth: 3, pointBackgroundColor: 'red' },
-                    { label: 'BLUE NETWORK', data: cityLevels.blue, backgroundColor: 'rgba(0,0,255,0.4)', borderColor: 'blue', borderWidth: 3, pointBackgroundColor: 'blue' }
+                    { label: 'RED TEAM', data: cityLevels.red, backgroundColor: 'rgba(255,0,0,0.4)', borderColor: 'red', borderWidth: 3 },
+                    { label: 'BLUE TEAM', data: cityLevels.blue, backgroundColor: 'rgba(0,0,255,0.4)', borderColor: 'blue', borderWidth: 3 }
                 ]
             },
             options: {
                 scales: { r: { min: 0, max: 5, grid: { color: '#444' }, angleLines: { color: '#444' }, ticks: { display: false } } },
-                plugins: { legend: { labels: { color: '#fff', font: { family: 'DungGeunMo', size: 18 } } } }
+                plugins: { legend: { labels: { color: '#fff', font: { family: 'DungGeunMo', size: 16 } } } }
             }
         });
     }
