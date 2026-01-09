@@ -2,68 +2,81 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>NATION BUILDER: TACTICAL</title>
+    <title>NATION BUILDER: FINAL DOMINATION</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --red: #ff2e2e; --blue: #2e70ff; --yellow: #f1c40f; --dark: #050505; --neon: #00ffdd; }
+        :root { 
+            --red-bg: #4a0000; --blue-bg: #00004a; 
+            --red-neon: #ff2e2e; --blue-neon: #2e70ff; 
+            --yellow: #f1c40f; --dark: #050505; --neon-cyan: #00ffdd;
+        }
         body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', sans-serif; margin: 0; overflow: hidden; }
         
-        /* 전체 시간 막대 바 */
+        /* 상단 전체 시간 막대 */
         #top-bar { position: fixed; top: 0; left: 0; right: 0; height: 90px; background: #111; z-index: 6000; border-bottom: 3px solid #333; }
         #total-progress-wrap { position: absolute; bottom: 0; left: 0; width: 100%; height: 10px; background: #222; }
         #total-progress-bar { width: 100%; height: 100%; background: var(--yellow); box-shadow: 0 0 15px var(--yellow); transition: 0.1s linear; }
-        #timer-disp { font-size: 3rem; text-align: center; width: 100%; line-height: 80px; color: var(--yellow); }
+        #timer-disp { font-size: 3rem; text-align: center; line-height: 80px; color: var(--yellow); }
 
+        /* 메인 게임 뷰 */
         #room-view { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; padding: 105px 15px 15px 15px; height: 100vh; box-sizing: border-box; }
         
-        .monitor { border: 6px solid #333; display: flex; flex-direction: column; border-radius: 15px; position: relative; overflow: hidden; transition: 0.4s; background: #000; }
-        .monitor.team-red { border-color: var(--red); box-shadow: inset 0 0 40px rgba(255,0,0,0.2); }
-        .monitor.team-blue { border-color: var(--blue); box-shadow: inset 0 0 40px rgba(0,0,255,0.2); }
-        .monitor.focused { position: fixed !important; inset: 100px 20px 20px 20px; z-index: 5000; border-width: 10px; }
+        /* 모니터 스타일 - 배경색 전면 적용 */
+        .monitor { border: 4px solid #333; display: flex; flex-direction: column; border-radius: 15px; position: relative; overflow: hidden; transition: background 0.5s, border 0.3s; background: #111; }
+        .monitor.team-red { background-color: var(--red-bg) !important; border-color: var(--red-neon); }
+        .monitor.team-blue { background-color: var(--blue-bg) !important; border-color: var(--blue-neon); }
+        .monitor.focused { position: fixed !important; inset: 100px 20px 20px 20px; z-index: 5000; border-width: 8px; }
 
-        /* 모니터별 팀 교체 타이머 바 (하단) */
-        .swap-timer-wrap { height: 8px; background: #111; width: 100%; position: relative; }
-        .swap-timer-bar { height: 100%; width: 100%; transition: 0.1s linear; }
-        .team-red .swap-timer-bar { background: var(--red); box-shadow: 0 0 10px var(--red); }
-        .team-blue .swap-timer-bar { background: var(--blue); box-shadow: 0 0 10px var(--blue); }
+        /* 감시 레이어 (텍스트 알림) */
+        .alert-layer { position: absolute; inset: 0; z-index: 4500; display: none; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+        .monitor.alert .alert-layer { display: flex; background: rgba(255, 0, 0, 0.4); }
+        .alert-text { font-size: 4rem; color: #fff; text-shadow: 0 0 20px #f00; font-weight: bold; background: #000; padding: 15px 40px; border: 6px solid #f00; animation: alert-blink 0.5s infinite; }
+        @keyframes alert-blink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.05); } }
 
-        /* 감시 레이저 효과 */
-        .laser-grid { position: absolute; inset: 0; pointer-events: none; z-index: 4500; opacity: 0; 
-            background: linear-gradient(rgba(255,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,0,0,0.1) 1px, transparent 1px);
-            background-size: 40px 40px; }
-        .monitor.alert .laser-grid { opacity: 1; border: 4px inset var(--red); animation: alert-flash 0.3s infinite; }
-        @keyframes alert-flash { 0% { background-color: rgba(255,0,0,0.1); } 100% { background-color: rgba(255,0,0,0.2); } }
+        /* 하단 10초 스왑 타이머 */
+        .swap-container { height: 15px; background: #000; width: 100%; position: relative; border-top: 2px solid rgba(255,255,255,0.1); }
+        .swap-bar { height: 100%; width: 100%; transition: 0.1s linear; }
+        .team-red .swap-bar { background: var(--red-neon); box-shadow: 0 0 15px var(--red-neon); }
+        .team-blue .swap-bar { background: var(--blue-neon); box-shadow: 0 0 15px var(--blue-neon); }
 
-        /* 보너스 문제 */
-        #bonus-pop { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--yellow); color: #000; padding: 15px 30px; font-size: 2rem; z-index: 4800; border: 4px solid #fff; display: none; box-shadow: 0 0 30px var(--yellow); }
+        /* 보너스 문제 팝업 */
+        #bonus-pop { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); background: var(--yellow); color: #000; padding: 25px 50px; font-size: 3.5rem; z-index: 4800; border: 6px solid #fff; display: none; box-shadow: 0 0 50px var(--yellow); animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes pop-in { from { transform: translate(-50%, -50%) scale(0); } to { transform: translate(-50%, -50%) scale(1); } }
 
-        .upgrade-layer { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 8px; background: rgba(0,0,0,0.8); }
-        .count-badge { font-size: 0.8rem; color: var(--neon); font-weight: bold; }
-        .up-btn { font-family: 'DungGeunMo'; padding: 5px; font-size: 0.7rem; border-radius: 4px; background: #222; color: #666; border: 1px solid #444; cursor: pointer; }
-        .up-btn.ready { background: var(--yellow); color: #000; animation: blink 0.5s infinite; }
+        /* 업그레이드 및 카운트 정보 */
+        .upgrade-layer { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 12px; background: rgba(0,0,0,0.7); border-bottom: 2px solid rgba(255,255,255,0.1); }
+        .count-badge { font-size: 1.1rem; color: var(--neon-cyan); font-weight: bold; margin-bottom: 4px; }
+        .up-btn { font-family: 'DungGeunMo'; padding: 8px; font-size: 0.85rem; background: #222; color: #777; border: 1px solid #444; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .up-btn.ready { background: #fff; color: #000; font-weight: bold; border-color: var(--yellow); animation: button-flash 0.6s infinite; }
+        @keyframes button-flash { 0%, 100% { background: var(--yellow); box-shadow: 0 0 10px var(--yellow); } 50% { background: #fff; box-shadow: none; } }
 
-        .board { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; flex: 1; padding: 10px; align-content: start; }
-        .card { aspect-ratio: 1/1; background: #111; border: 1px solid #222; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #444; border-radius: 4px; text-align: center; }
-        .card.owned-red { background: var(--red) !important; color: #fff !important; border-color: #fff; }
-        .card.owned-blue { background: var(--blue) !important; color: #fff !important; border-color: #fff; }
+        /* 정사각형 카드 보드 */
+        .board { display: grid; grid-template-columns: repeat(14, 1fr); gap: 6px; flex: 1; padding: 20px; align-content: start; background: rgba(0,0,0,0.3); }
+        .card { aspect-ratio: 1/1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: #888; border-radius: 5px; text-align: center; word-break: keep-all; line-height: 1.2; }
+        .card.owned-red { background: var(--red-neon) !important; color: #fff !important; font-weight: bold; border-color: #fff; box-shadow: 0 0 10px var(--red-neon); }
+        .card.owned-blue { background: var(--blue-neon) !important; color: #fff !important; font-weight: bold; border-color: #fff; box-shadow: 0 0 10px var(--blue-neon); }
 
-        .input-wrap { display: flex; height: 90px; border-top: 4px solid #333; }
-        .input-box { flex: 1; background: #000; border: none; font-size: 4rem; text-align: center; outline: none; font-family: 'DungGeunMo'; color: #fff; }
-        .team-red .input-box { color: var(--red); text-shadow: 0 0 15px var(--red); }
-        .team-blue .input-box { color: var(--blue); text-shadow: 0 0 15px var(--blue); }
+        /* 입력창 구역 */
+        .input-wrap { display: flex; height: 110px; border-top: 5px solid rgba(0,0,0,0.5); }
+        .input-box { flex: 1; background: #000; border: none; font-size: 4.5rem; text-align: center; outline: none; font-family: 'DungGeunMo'; color: #fff; }
+        .team-red .input-box { color: var(--red-neon); text-shadow: 0 0 20px var(--red-neon); }
+        .team-blue .input-box { color: var(--blue-neon); text-shadow: 0 0 20px var(--blue-neon); }
 
-        .start-gate { position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 5500; display: flex; align-items: center; justify-content: center; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        /* 로비/시작 화면 */
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .start-btn { padding: 30px 80px; font-family: 'DungGeunMo'; font-size: 3rem; background: var(--yellow); border: none; cursor: pointer; border-radius: 20px; box-shadow: 0 10px 0 #b8860b; transition: 0.1s; }
+        .start-btn:active { transform: translateY(5px); box-shadow: 0 5px 0 #b8860b; }
     </style>
 </head>
 <body>
 
-<div id="lobby-screen" style="position:fixed; inset:0; background:rgba(0,0,0,0.98); z-index:10000; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-    <h1 style="color:var(--yellow); font-size: 4rem;">NATION BUILDER</h1>
-    <button onclick="prepareRound()" style="padding:20px 50px; font-family:'DungGeunMo'; font-size:2rem; background:var(--yellow); border:none; cursor:pointer;">데이터 로드 및 시작</button>
+<div id="lobby-screen" class="overlay">
+    <h1 style="color:var(--yellow); font-size: 5rem; margin-bottom: 30px; text-shadow: 0 0 20px var(--yellow);">NATION BUILDER</h1>
+    <p style="color:#0ff; font-size: 1.5rem; margin-bottom: 50px;">[ 마을 > 도시 > 신생국 > 개도국 > 선진국 ]</p>
+    <button class="start-btn" onclick="prepareRound()">세션 시작</button>
 </div>
 
 <div id="top-bar">
@@ -77,7 +90,7 @@
         for(let i=1; i<=4; i++) {
             document.write(`
                 <div class="monitor" id="mon-${i}" onclick="zoomIn(${i})">
-                    <div class="laser-grid"></div>
+                    <div class="alert-layer"><div class="alert-text">감시 중: 입력 중단!</div></div>
                     <div class="upgrade-layer">
                         ${cityList.map((c, idx) => `
                             <div style="text-align:center;">
@@ -87,12 +100,11 @@
                         `).join('')}
                     </div>
                     <div id="bonus-pop">BONUS!</div>
-                    <div class="start-gate" id="gate-${i}" style="display:none;">
-                        <button onclick="triggerActualStart(event, ${i})" style="padding:20px 40px; font-family:'DungGeunMo'; font-size:2rem; background:var(--yellow); border:none; cursor:pointer;">접속 승인</button>
-                    </div>
                     <div class="board" id="board-${i}"></div>
-                    <div class="input-wrap"><input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="..." disabled autocomplete="off"></div>
-                    <div class="swap-timer-wrap"><div class="swap-timer-bar" id="swap-bar-${i}"></div></div>
+                    <div class="input-wrap">
+                        <input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="터미널 대기" disabled autocomplete="off">
+                    </div>
+                    <div class="swap-container"><div class="swap-bar" id="swap-bar-${i}"></div></div>
                 </div>
             `);
         }
@@ -111,10 +123,12 @@
     let persistentCards = {}, activeWords = {}, active = false, isAlert = false, currentBonus = "";
     let cityLevels = { red: {}, blue: {} }; 
     let currentTeams = { 1:'red', 2:'red', 3:'blue', 4:'blue' };
-    const stepNames = ["공터", "마을", "도시", "신생국", "개발국", "선진국"];
+    const stepNames = ["공터", "마을", "도시", "신생국", "개도국", "선진국"];
 
     cityList.forEach(c => { cityLevels.red[c] = 0; cityLevels.blue[c] = 0; });
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v11');
+    
+    // Firebase 설정
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_final_v12');
 
     function prepareRound() {
         document.getElementById('lobby-screen').style.display = 'none';
@@ -136,15 +150,8 @@
     }
 
     function zoomIn(id) {
-        if(document.getElementById(`mon-${id}`).classList.contains('focused')) return;
         document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
         document.getElementById(`mon-${id}`).classList.add('focused');
-        document.getElementById(`gate-${id}`).style.display = 'flex';
-    }
-
-    function triggerActualStart(e, id) {
-        e.stopPropagation();
-        document.getElementById(`gate-${id}`).style.display = 'none';
         document.getElementById(`in-${id}`).disabled = false;
         document.getElementById(`in-${id}`).focus();
         if(!active) db.update({ state: 'START' });
@@ -176,20 +183,21 @@
             const myTeam = currentTeams[id];
             const enemyTeam = (myTeam === 'red') ? 'blue' : 'red';
             
-            if(isAlert) { // 감시 중 입력 페널티: 중립화
+            if(isAlert) {
+                // 감시 중 페널티: 중립화
                 db.child('cards').once('value', s => {
                     const c = s.val(); if(!c) return;
                     const mine = Object.keys(c).filter(k => c[k].team === myTeam);
-                    if(mine.length > 0) db.child('cards').child(mine[mine.length-1]).remove(); // 삭제하여 중립화
+                    if(mine.length > 0) db.child('cards').child(mine[mine.length-1]).remove();
                 });
-            } else if(val === currentBonus) { // 보너스 약탈 로직
+            } else if(val === currentBonus && currentBonus !== "") {
+                // 보너스 약탈: 상대방 카드 3개 탈취
                 db.child('cards').once('value', s => {
                     const c = s.val(); if(!c) return;
                     const enemyCards = Object.keys(c).filter(k => c[k].team === enemyTeam);
                     const loot = enemyCards.sort(() => 0.5 - Math.random()).slice(0, 3);
                     loot.forEach(k => db.child('cards').child(k).set({ team: myTeam }));
                     db.update({ bonus: "" });
-                    alert(`[JACKPOT] ${myTeam.toUpperCase()}팀이 상대 자원 3개를 약탈했습니다!`);
                 });
             } else if(findCat(val)) {
                 db.child('cards').child(val).set({ team: myTeam });
@@ -203,6 +211,7 @@
     function updateStats() {
         const scores = { red: {}, blue: {} };
         cityList.forEach(c => { scores.red[c] = 0; scores.blue[c] = 0; });
+        
         Object.keys(persistentCards).forEach(w => {
             const t = persistentCards[w].team;
             const cat = findCat(w); if(cat) scores[t][cat]++;
@@ -211,7 +220,8 @@
                 if(cEl) { cEl.classList.remove('owned-red', 'owned-blue'); cEl.classList.add(`owned-${t}`); }
             }
         });
-        // 중립화된 카드 복구
+
+        // 중립화된 카드 UI 초기화
         Object.values(activeWords).flat().forEach(w => {
             if(!persistentCards[w]) {
                 for(let i=1; i<=4; i++) {
@@ -225,9 +235,10 @@
             const team = currentTeams[i];
             cityList.forEach((c, idx) => {
                 const s = scores[team][c]; const l = cityLevels[team][c];
-                document.getElementById(`cnt-${i}-${idx}`).innerText = `${s}/${(l+1)*10}`;
+                const target = (l + 1) * 10;
+                document.getElementById(`cnt-${i}-${idx}`).innerText = `${s}/${target}`;
                 const btn = document.getElementById(`up-${i}-${idx}`);
-                btn.classList.toggle('ready', s >= (l+1)*10 && l < 5);
+                btn.classList.toggle('ready', s >= target && l < 5);
                 btn.innerText = stepNames[l];
             });
         }
@@ -243,18 +254,17 @@
     }
 
     function startTimer() {
-        let time = 1200;
-        const totalMax = 1200;
+        let time = 1200; // 120초
         const intr = setInterval(() => {
             time--;
             
-            // 1. 상단 전체 프로그레스 바
-            document.getElementById('total-progress-bar').style.width = (time/totalMax)*100 + "%";
+            // 상단 전체 시간 바
+            document.getElementById('total-progress-bar').style.width = (time/1200)*100 + "%";
             document.getElementById('timer-disp').innerText = (time/10).toFixed(1) + "s";
             
-            // 2. 하단 팀 교체 프로그레스 바 (10초 주기)
-            let swapTime = time % 100;
-            document.querySelectorAll('.swap-timer-bar').forEach(bar => {
+            // 하단 10초 스왑 바
+            let swapTime = (time % 100);
+            document.querySelectorAll('.swap-bar').forEach(bar => {
                 bar.style.width = (swapTime === 0 ? 0 : swapTime) + "%";
             });
 
@@ -264,16 +274,17 @@
                 db.update({ teams: { 1:ts[0], 2:ts[1], 3:ts[2], 4:ts[3] } });
             }
 
-            // 20초마다 감시
+            // 20초 주기 중 5초간 감시 (50틱)
             isAlert = ((time % 200) <= 50 && (time % 200) > 0);
 
-            // 30초마다 보너스
+            // 30초마다 보너스 단어 생성
             if(time > 0 && time % 300 === 0) {
                 const allWords = Object.values(cityMap).flat();
                 db.update({ bonus: allWords[Math.floor(Math.random()*allWords.length)] });
+                setTimeout(() => db.update({ bonus: "" }), 7000); // 7초 뒤 자동 소멸
             }
 
-            if(time <= 0) { clearInterval(intr); alert("게임 종료! 최종 오각형 결과를 확인하세요."); }
+            if(time <= 0) { clearInterval(intr); alert("게임 종료! 최종 오각형 발전을 확인하십시오."); }
         }, 100);
     }
 </script>
