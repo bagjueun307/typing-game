@@ -2,18 +2,18 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>NATION BUILDER v20.4 - Cyber Icons</title>
+    <title>NATION BUILDER v20.3 - Visual Warfare</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --dark: #050505; --red: #ff1a1a; --blue: #1a75ff; --yellow: #ffea00; --neon: #00ff41; --glass: rgba(255,255,255,0.05); }
+        :root { --dark: #050505; --red: #ff1a1a; --blue: #1a75ff; --yellow: #ffea00; --neon: #00ff41; }
         body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', monospace; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
         #top-bar { height: 90px; background: #000; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 2px solid #333; }
-        #timer-disp { font-size: 2.8rem; color: var(--yellow); min-width: 130px; text-shadow: 0 0 10px var(--yellow); }
+        #timer-disp { font-size: 2.5rem; color: var(--yellow); min-width: 130px; }
         
         .territory-status { display: flex; gap: 15px; flex: 1; justify-content: center; }
         .icon-box { display: flex; flex-direction: column; align-items: center; min-width: 80px; padding: 5px; background: #0a0a0a; border: 1px solid #222; }
@@ -23,32 +23,33 @@
 
         #room-view { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; padding: 10px; background: #111; }
         .monitor { border: 5px solid #333; position: relative; display: flex; flex-direction: column; background: #000; transition: 0.3s; overflow: hidden; }
-        .monitor.team-red { border-color: var(--red); background: linear-gradient(180deg, #200 0%, #000 100%); }
-        .monitor.team-blue { border-color: var(--blue); background: linear-gradient(180deg, #001 0%, #000 100%); }
+        .monitor.team-red { border-color: var(--red); background: linear-gradient(180deg, #300 0%, #000 100%); }
+        .monitor.team-blue { border-color: var(--blue); background: linear-gradient(180deg, #001a4d 0%, #000 100%); }
         .monitor.focused { position: fixed !important; inset: 105px 10px 10px 10px; z-index: 5000; }
 
-        /* 감시 레이더 - 사이버 테마 */
-        .radar-display { position: absolute; top: 60px; right: 20px; width: 200px; background: rgba(0, 255, 65, 0.05); border-left: 3px solid var(--neon); color: var(--neon); padding: 12px; font-size: 0.8rem; z-index: 5500; display: none; backdrop-filter: blur(5px); }
+        /* [핵심] 감시 레이더 스타일 */
+        .radar-display { position: absolute; top: 60px; right: 20px; width: 180px; background: rgba(0, 255, 65, 0.1); border: 1px solid var(--neon); color: var(--neon); padding: 10px; font-size: 0.8rem; z-index: 5500; display: none; box-shadow: 0 0 10px rgba(0, 255, 65, 0.3); }
         .monitor.focused .radar-display { display: block; }
+        .radar-line { border-bottom: 1px dashed var(--neon); margin: 5px 0; opacity: 0.5; }
 
-        /* 단계별 아이콘 스타일 */
-        .level-icon-wrap { font-size: 1.1rem; margin-bottom: 3px; transition: 0.3s; }
-        .up-btn { background: var(--neon); color: #000; border: none; font-family: 'DungGeunMo'; font-weight: bold; font-size: 0.65rem; cursor: pointer; padding: 2px 5px; border-radius: 2px; margin-left: 5px; display: none; animation: blink 0.5s infinite; }
+        /* 업그레이드 아이콘 & 버튼 */
+        .city-icon { font-size: 1.2rem; margin-right: 5px; }
+        .up-btn { background: var(--neon); color: #000; border: none; font-family: 'DungGeunMo'; font-weight: bold; font-size: 0.7rem; cursor: pointer; padding: 2px 6px; border-radius: 3px; margin-left: 5px; display: none; animation: blink 0.5s infinite; }
         
-        #bonus-alert { position: absolute; top: 15%; left: 50%; transform: translateX(-50%); background: var(--yellow); color: #000; padding: 15px 40px; border-radius: 4px; z-index: 7000; display: none; font-weight: bold; border: 4px double #000; }
+        #bonus-alert { position: absolute; top: 15%; left: 50%; transform: translateX(-50%); background: var(--yellow); color: #000; padding: 10px 30px; border-radius: 20px; z-index: 7000; display: none; font-weight: bold; border: 3px solid #fff; box-shadow: 0 0 20px var(--yellow); }
 
-        .missile-panel { position: absolute; bottom: 110px; left: 50%; transform: translateX(-50%); background: #fff; padding: 20px; border: 5px solid var(--red); display: none; flex-direction: column; align-items: center; z-index: 6000; color: #000; border-radius: 2px; }
+        .missile-panel { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); background: #fff; padding: 20px; border: 5px solid var(--red); display: none; flex-direction: column; align-items: center; z-index: 6000; border-radius: 10px; color: #000; }
 
         .board { flex: 1; display: grid; grid-template-columns: repeat(14, 1fr); gap: 3px; padding: 10px; }
-        .card { background: var(--glass); font-size: 0.7rem; display: flex; align-items: center; justify-content: center; border: 1px solid #222; height: 32px; color: #444; border-radius: 2px; }
-        .card.owned-red { background: var(--red) !important; color: white; border: none; box-shadow: 0 0 5px var(--red); }
-        .card.owned-blue { background: var(--blue) !important; color: white; border: none; box-shadow: 0 0 5px var(--blue); }
+        .card { background: rgba(255,255,255,0.05); font-size: 0.7rem; display: flex; align-items: center; justify-content: center; border: 1px solid #222; height: 30px; color: #444; border-radius: 3px; }
+        .card.owned-red { background: var(--red) !important; color: white; border: none; }
+        .card.owned-blue { background: var(--blue) !important; color: white; border: none; }
 
-        .input-wrap { height: 80px; display: flex; border-top: 2px solid #333; }
-        .input-box { flex: 1; background: transparent; border: none; font-size: 3rem; text-align: center; color: #fff; font-family: 'DungGeunMo'; outline: none; letter-spacing: 2px; }
+        .input-wrap { height: 75px; display: flex; border-top: 2px solid #333; }
+        .input-box { flex: 1; background: transparent; border: none; font-size: 2.8rem; text-align: center; color: #fff; font-family: 'DungGeunMo'; outline: none; }
 
         #result-screen { position: fixed; inset: 0; background: #000; z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; }
-        @keyframes blink { 50% { opacity: 0.2; } }
+        @keyframes blink { 50% { opacity: 0.3; } }
     </style>
 </head>
 <body>
@@ -65,43 +66,44 @@
 </div>
 
 <div id="shuffle-container"><div id="shuffle-bar"></div></div>
-<div id="bonus-alert">MISSION: <span id="bonus-word"></span></div>
+<div id="bonus-alert">⚠️ 보너스 문제: <span id="bonus-word"></span> ⚠️</div>
 
 <div id="room-view">
     <script>
         const cityNames = ['발전','강철','자본','미래','지혜'];
         const rankLabels = ['공터','마을','도시','개도국','선진국'];
-        const rankIcons = ['fa-map-marker-alt','fa-home','fa-building','fa-fighter-jet','fa-crown'];
+        const rankIcons = ['🏕️','🏡','🏢','🚀','💎'];
 
         for(let i=1; i<=4; i++) {
             document.write(`
                 <div class="monitor" id="mon-${i}" onclick="zoomIn(${i})">
-                    <div class="gate" id="gate-${i}"><button class="start-btn" onclick="requestStart(event)" style="padding:20px 40px; font-size:1.8rem; font-family:'DungGeunMo'; cursor:pointer; background:var(--yellow); border:none;">SYSTEM START</button></div>
+                    <div class="gate" id="gate-${i}"><button class="start-btn" onclick="requestStart(event)" style="padding:20px 40px; font-size:1.5rem; font-family:'DungGeunMo';">START MISSION</button></div>
                     
                     <div class="radar-display" id="radar-${i}">
-                        <div style="letter-spacing:1px; color:#888; font-size:0.7rem;">ANALYZING ENEMY...</div>
-                        <div id="radar-info-${i}" style="margin-top:5px; line-height:1.4;">WATING...</div>
+                        <div style="font-weight:bold; margin-bottom:5px;">[적국 실시간 동향]</div>
+                        <div class="radar-line"></div>
+                        <div id="radar-info-${i}">분석 중...</div>
                     </div>
 
                     <div class="missile-panel" id="mis-panel-${i}">
-                        <b style="letter-spacing:1px; color:red;">[WEAPON AUTHORIZED]</b>
-                        <button onclick="launchMissile(event, ${i})" style="padding:12px 24px; background:red; color:white; border:none; margin-top:10px; cursor:pointer; font-family:'DungGeunMo'; font-weight:bold;">LAUNCH MISSILE</button>
+                        <b style="color:red">🚀 패권 미사일 준비완료</b>
+                        <button onclick="launchMissile(event, ${i})" style="padding:10px 20px; background:red; color:white; border:none; margin-top:10px; cursor:pointer; font-family:'DungGeunMo';">타겟 파괴 (카드 7장)</button>
                     </div>
 
-                    <div style="display:flex; justify-content:space-around; background:rgba(0,0,0,0.9); padding:10px; border-bottom:1px solid #222;">
+                    <div style="display:flex; justify-content:space-around; background:rgba(0,0,0,0.8); padding:8px;">
                         ${cityNames.map((c, idx) => `
                             <div style="display:flex; flex-direction:column; align-items:center;">
                                 <div style="display:flex; align-items:center;">
-                                    <span class="level-icon-wrap" id="icon-wrap-${i}-${idx}"><i class="fas ${rankIcons[0]}"></i></span>
-                                    <span id="lvl-${i}-${idx}" style="font-size:0.75rem; color:#fff; margin-left:5px;">${c}</span>
+                                    <span class="city-icon" id="icon-${i}-${idx}">🏕️</span>
+                                    <span id="lvl-${i}-${idx}" style="font-size:0.75rem; color:var(--yellow);">${c}</span>
                                     <button id="up-btn-${i}-${idx}" class="up-btn" onclick="upgradeCity(event, ${i}, ${idx})">UP</button>
                                 </div>
-                                <span id="label-${i}-${idx}" style="font-size:0.6rem; color:#666; margin-top:2px;">INIT</span>
+                                <span id="label-${i}-${idx}" style="font-size:0.6rem; color:#aaa;">공터</span>
                             </div>
                         `).join('')}
                     </div>
                     <div class="board" id="board-${i}"></div>
-                    <div class="input-wrap"><input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="TYPE HERE" disabled autocomplete="off"></div>
+                    <div class="input-wrap"><input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="..." disabled autocomplete="off"></div>
                 </div>
             `);
         }
@@ -109,13 +111,13 @@
 </div>
 
 <div id="result-screen">
-    <h1 style="color:var(--yellow); font-size:3.5rem; letter-spacing:5px;">STRATEGIC MAP</h1>
-    <div style="width:480px; height:480px;"><canvas id="radarChart"></canvas></div>
-    <button onclick="closeResult()" style="margin-top:30px; padding:15px 50px; background:var(--yellow); border:none; cursor:pointer; font-family:'DungGeunMo'; font-size:1.5rem;">RESTART</button>
+    <h1 style="color:var(--yellow); font-size:3rem;">CONQUEST SUMMARY</h1>
+    <div style="width:450px; height:450px;"><canvas id="radarChart"></canvas></div>
+    <button onclick="closeResult()" style="margin-top:20px; padding:10px 40px; background:var(--yellow); border:none; cursor:pointer; font-family:'DungGeunMo';">RELOAD</button>
 </div>
 
 <script>
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v20_4');
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v20_3');
     window.onload = () => { db.set({ state: 'READY', cards: {}, words: [], teams: { 1:'red', 2:'red', 3:'blue', 4:'blue' }, levels: { red:[0,0,0,0,0], blue:[0,0,0,0,0] } }); };
 
     const wordPool = {
@@ -230,12 +232,9 @@
             
             cityNames.forEach((_, idx) => {
                 const lv = cityLevels[team][idx];
-                const iconWrap = document.getElementById(`icon-wrap-${i}-${idx}`);
-                iconWrap.innerHTML = `<i class="fas ${rankIcons[lv]}"></i>`;
-                iconWrap.style.color = lv > 0 ? (team === 'red' ? 'var(--red)' : 'var(--blue)') : '#444';
-                iconWrap.style.textShadow = lv > 2 ? `0 0 10px ${team}` : 'none';
-                
+                document.getElementById(`icon-${i}-${idx}`).innerText = rankIcons[lv];
                 document.getElementById(`label-${i}-${idx}`).innerText = rankLabels[lv];
+                
                 const upBtn = document.getElementById(`up-btn-${i}-${idx}`);
                 upBtn.style.display = (counts[team][idx] >= 5 && lv < 4) ? 'inline-block' : 'none';
 
@@ -243,12 +242,11 @@
                 statTag.innerText = rankLabels[Math.max(cityLevels.red[idx], cityLevels.blue[idx])];
             });
 
-            // 레이더 브리핑
+            // 레이더 정보 갱신
             const radarInfo = document.getElementById(`radar-info-${i}`);
-            const enemyLevels = cityLevels[enemy];
-            const maxVal = Math.max(...enemyLevels);
-            const maxIdx = enemyLevels.indexOf(maxVal);
-            radarInfo.innerHTML = `TARGET: <span style="color:${enemy}">${enemy.toUpperCase()}</span><br>SECTOR: ${cityNames[maxIdx]}<br>STATUS: ${rankLabels[maxVal]}`;
+            const enemyMaxLv = Math.max(...cityLevels[enemy]);
+            const enemyMaxTerritory = cityNames[cityLevels[enemy].indexOf(enemyMaxLv)];
+            radarInfo.innerHTML = `현재 표적: ${enemy.toUpperCase()}<br>주력 영토: ${enemyMaxTerritory}<br>전력 단계: ${rankLabels[enemyMaxLv]}`;
 
             const panel = document.getElementById(`mis-panel-${i}`);
             if(i === focusedId && cityLevels[team].some(l => l >= 3) && active) panel.style.display = 'flex';
@@ -263,14 +261,14 @@
         const team = currentTeams[id];
         const enemy = team === 'red' ? 'blue' : 'red';
         const myCards = Object.keys(pCards).filter(k => pCards[k] === team);
-        if(myCards.length < 7) return alert("RESOURCES INSUFFICIENT (NEED 7 CARDS)");
+        if(myCards.length < 7) return alert("자원 부족!");
         
         myCards.slice(0, 7).forEach(k => db.child('cards').child(k).remove());
         const enemyLevels = [...cityLevels[enemy]];
         const target = enemyLevels.indexOf(Math.max(...enemyLevels));
         if(enemyLevels[target] > 0) enemyLevels[target]--;
         db.child('levels').child(enemy).set(enemyLevels);
-        alert("MISSILE IMPACT CONFIRMED");
+        alert("적 영토에 미사일 타격 성공!");
     }
 
     function startTimer() {
@@ -296,16 +294,16 @@
     function showResult() {
         document.getElementById('result-screen').style.display = 'flex';
         const ctx = document.getElementById('radarChart').getContext('2d');
-        new Chart(ctx, {
+        const radarChart = new Chart(ctx, {
             type: 'radar',
             data: {
                 labels: cityNames,
                 datasets: [
-                    { label: 'RED FORCE', data: cityLevels.red, backgroundColor: 'rgba(255,0,0,0.4)', borderColor: 'red' },
-                    { label: 'BLUE FORCE', data: cityLevels.blue, backgroundColor: 'rgba(0,0,255,0.4)', borderColor: 'blue' }
+                    { label: 'RED', data: cityLevels.red, backgroundColor: 'rgba(255,0,0,0.5)', borderColor: 'red' },
+                    { label: 'BLUE', data: cityLevels.blue, backgroundColor: 'rgba(0,0,255,0.5)', borderColor: 'blue' }
                 ]
             },
-            options: { scales: { r: { min:0, max:4, ticks:{display:false}, grid:{color:'#333'}, pointLabels:{color:'#fff'} } } }
+            options: { scales: { r: { min:0, max:4, ticks:{display:false} } } }
         });
     }
     function closeResult() { location.reload(); }
