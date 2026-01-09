@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>NATION BUILDER: ULTIMATE</title>
+    <title>NATION BUILDER: TACTICAL</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
@@ -11,58 +11,64 @@
         :root { --red: #ff2e2e; --blue: #2e70ff; --yellow: #f1c40f; --dark: #050505; --neon: #00ffdd; }
         body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', sans-serif; margin: 0; overflow: hidden; }
         
-        #top-bar { position: fixed; top: 0; left: 0; right: 0; height: 110px; background: #111; border-bottom: 5px solid var(--yellow); display: flex; justify-content: space-around; align-items: center; z-index: 6000; }
-        #timer-disp { font-size: 4rem; color: var(--yellow); text-shadow: 0 0 15px var(--yellow); }
+        /* 전체 시간 막대 바 */
+        #top-bar { position: fixed; top: 0; left: 0; right: 0; height: 90px; background: #111; z-index: 6000; border-bottom: 3px solid #333; }
+        #total-progress-wrap { position: absolute; bottom: 0; left: 0; width: 100%; height: 10px; background: #222; }
+        #total-progress-bar { width: 100%; height: 100%; background: var(--yellow); box-shadow: 0 0 15px var(--yellow); transition: 0.1s linear; }
+        #timer-disp { font-size: 3rem; text-align: center; width: 100%; line-height: 80px; color: var(--yellow); }
 
-        #room-view { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; padding: 130px 15px 15px 15px; height: 100vh; box-sizing: border-box; }
+        #room-view { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; padding: 105px 15px 15px 15px; height: 100vh; box-sizing: border-box; }
         
-        /* 모니터 & 팀 색상 광원 효과 */
-        .monitor { border: 6px solid #333; display: flex; flex-direction: column; border-radius: 15px; position: relative; overflow: hidden; transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
-        .monitor.team-red { background: rgba(50, 0, 0, 0.9); border-color: var(--red); box-shadow: inset 0 0 50px rgba(255,0,0,0.3); }
-        .monitor.team-blue { background: rgba(0, 0, 50, 0.9); border-color: var(--blue); box-shadow: inset 0 0 50px rgba(0,0,255,0.3); }
-        .monitor.focused { position: fixed !important; inset: 120px 20px 20px 20px; z-index: 5000; border-width: 12px; }
+        .monitor { border: 6px solid #333; display: flex; flex-direction: column; border-radius: 15px; position: relative; overflow: hidden; transition: 0.4s; background: #000; }
+        .monitor.team-red { border-color: var(--red); box-shadow: inset 0 0 40px rgba(255,0,0,0.2); }
+        .monitor.team-blue { border-color: var(--blue); box-shadow: inset 0 0 40px rgba(0,0,255,0.2); }
+        .monitor.focused { position: fixed !important; inset: 100px 20px 20px 20px; z-index: 5000; border-width: 10px; }
 
-        /* 감시 그리드 레이어 */
-        .laser-layer { position: absolute; inset: 0; pointer-events: none; z-index: 4500; opacity: 0; background: repeating-linear-gradient(rgba(255,0,0,0.1) 0 2px, transparent 2px 40px), repeating-linear-gradient(90deg, rgba(255,0,0,0.1) 0 2px, transparent 2px 40px); transition: 0.3s; }
-        .monitor.alert .laser-layer { opacity: 1; animation: laser-blink 0.5s infinite; }
-        @keyframes laser-blink { 0%, 100% { background-color: rgba(255,0,0,0.2); } 50% { background-color: transparent; } }
+        /* 모니터별 팀 교체 타이머 바 (하단) */
+        .swap-timer-wrap { height: 8px; background: #111; width: 100%; position: relative; }
+        .swap-timer-bar { height: 100%; width: 100%; transition: 0.1s linear; }
+        .team-red .swap-timer-bar { background: var(--red); box-shadow: 0 0 10px var(--red); }
+        .team-blue .swap-timer-bar { background: var(--blue); box-shadow: 0 0 10px var(--blue); }
 
-        /* 보너스 문제 팝업 */
-        #bonus-pop { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--yellow); color: #000; padding: 20px 40px; font-size: 2.5rem; z-index: 4800; border: 5px solid #fff; display: none; box-shadow: 0 0 30px var(--yellow); animation: pop 0.3s; }
-        @keyframes pop { 0% { transform: translate(-50%, -50%) scale(0); } 100% { transform: translate(-50%, -50%) scale(1); } }
+        /* 감시 레이저 효과 */
+        .laser-grid { position: absolute; inset: 0; pointer-events: none; z-index: 4500; opacity: 0; 
+            background: linear-gradient(rgba(255,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,0,0,0.1) 1px, transparent 1px);
+            background-size: 40px 40px; }
+        .monitor.alert .laser-grid { opacity: 1; border: 4px inset var(--red); animation: alert-flash 0.3s infinite; }
+        @keyframes alert-flash { 0% { background-color: rgba(255,0,0,0.1); } 100% { background-color: rgba(255,0,0,0.2); } }
 
-        /* 상단 통계 바 */
-        .upgrade-layer { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; background: rgba(0,0,0,0.7); padding: 10px; border-bottom: 3px solid #444; }
-        .count-badge { font-size: 0.9rem; color: var(--neon); font-weight: bold; margin-bottom: 4px; text-shadow: 0 0 5px var(--neon); }
-        .up-btn { font-family: 'DungGeunMo'; padding: 8px; font-size: 0.8rem; cursor: pointer; border: 2px solid #444; background: #222; color: #777; border-radius: 6px; }
-        .up-btn.ready { background: #fff; color: #000; animation: flash 0.6s infinite; border-color: var(--yellow); font-weight: bold; }
-        @keyframes flash { 0%, 100% { background: var(--yellow); } 50% { background: #fff; } }
+        /* 보너스 문제 */
+        #bonus-pop { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--yellow); color: #000; padding: 15px 30px; font-size: 2rem; z-index: 4800; border: 4px solid #fff; display: none; box-shadow: 0 0 30px var(--yellow); }
 
-        /* 정사각형 카드 보드 */
-        .board { display: grid; grid-template-columns: repeat(14, 1fr); gap: 5px; flex: 1; padding: 15px; align-content: start; }
-        .card { aspect-ratio: 1/1; background: #1a1a1a; border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: #555; text-align: center; border-radius: 4px; word-break: keep-all; line-height: 1.2; padding: 2px; }
-        .card.owned-red { background: var(--red) !important; color: #fff !important; border-color: #fff; box-shadow: 0 0 10px var(--red); }
-        .card.owned-blue { background: var(--blue) !important; color: #fff !important; border-color: #fff; box-shadow: 0 0 10px var(--blue); }
+        .upgrade-layer { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 8px; background: rgba(0,0,0,0.8); }
+        .count-badge { font-size: 0.8rem; color: var(--neon); font-weight: bold; }
+        .up-btn { font-family: 'DungGeunMo'; padding: 5px; font-size: 0.7rem; border-radius: 4px; background: #222; color: #666; border: 1px solid #444; cursor: pointer; }
+        .up-btn.ready { background: var(--yellow); color: #000; animation: blink 0.5s infinite; }
 
-        /* 초대형 입력창 */
-        .input-wrap { display: flex; height: 110px; border-top: 6px solid #333; }
-        .input-box { flex: 1; background: #000; border: none; font-size: 4.5rem; text-align: center; outline: none; font-family: 'DungGeunMo'; color: #fff; }
-        .team-red .input-box { color: var(--red); text-shadow: 0 0 20px var(--red); }
-        .team-blue .input-box { color: var(--blue); text-shadow: 0 0 20px var(--blue); }
-        
-        .start-gate { position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 5500; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .gate-btn { padding: 25px 60px; font-family: 'DungGeunMo'; font-size: 2.5rem; background: var(--yellow); border: none; cursor: pointer; border-radius: 15px; }
+        .board { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; flex: 1; padding: 10px; align-content: start; }
+        .card { aspect-ratio: 1/1; background: #111; border: 1px solid #222; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #444; border-radius: 4px; text-align: center; }
+        .card.owned-red { background: var(--red) !important; color: #fff !important; border-color: #fff; }
+        .card.owned-blue { background: var(--blue) !important; color: #fff !important; border-color: #fff; }
+
+        .input-wrap { display: flex; height: 90px; border-top: 4px solid #333; }
+        .input-box { flex: 1; background: #000; border: none; font-size: 4rem; text-align: center; outline: none; font-family: 'DungGeunMo'; color: #fff; }
+        .team-red .input-box { color: var(--red); text-shadow: 0 0 15px var(--red); }
+        .team-blue .input-box { color: var(--blue); text-shadow: 0 0 15px var(--blue); }
+
+        .start-gate { position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 5500; display: flex; align-items: center; justify-content: center; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     </style>
 </head>
 <body>
 
-<div id="lobby-screen" style="position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:10000; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-    <h1 style="color:var(--yellow); font-size: 5rem;">NATION BUILDER</h1>
-    <button class="gate-btn" onclick="prepareRound()">세션 가동</button>
+<div id="lobby-screen" style="position:fixed; inset:0; background:rgba(0,0,0,0.98); z-index:10000; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+    <h1 style="color:var(--yellow); font-size: 4rem;">NATION BUILDER</h1>
+    <button onclick="prepareRound()" style="padding:20px 50px; font-family:'DungGeunMo'; font-size:2rem; background:var(--yellow); border:none; cursor:pointer;">데이터 로드 및 시작</button>
 </div>
 
 <div id="top-bar">
-    <div id="timer-disp">120.0s</div>
+    <div id="timer-disp">READY</div>
+    <div id="total-progress-wrap"><div id="total-progress-bar"></div></div>
 </div>
 
 <div id="room-view">
@@ -71,21 +77,22 @@
         for(let i=1; i<=4; i++) {
             document.write(`
                 <div class="monitor" id="mon-${i}" onclick="zoomIn(${i})">
-                    <div class="laser-layer"></div>
+                    <div class="laser-grid"></div>
                     <div class="upgrade-layer">
                         ${cityList.map((c, idx) => `
-                            <div class="up-wrap" style="text-align:center;">
+                            <div style="text-align:center;">
                                 <div class="count-badge" id="cnt-${i}-${idx}">0/10</div>
                                 <button class="up-btn" id="up-${i}-${idx}" onclick="requestUpgrade(event, ${i}, '${c}', ${idx})">${c.split(' ')[0]}</button>
                             </div>
                         `).join('')}
                     </div>
-                    <div id="bonus-pop">BONUS: ???</div>
+                    <div id="bonus-pop">BONUS!</div>
                     <div class="start-gate" id="gate-${i}" style="display:none;">
-                        <button class="gate-btn" onclick="triggerActualStart(event, ${i})">건설 개시</button>
+                        <button onclick="triggerActualStart(event, ${i})" style="padding:20px 40px; font-family:'DungGeunMo'; font-size:2rem; background:var(--yellow); border:none; cursor:pointer;">접속 승인</button>
                     </div>
                     <div class="board" id="board-${i}"></div>
-                    <div class="input-wrap"><input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="잠김" disabled autocomplete="off"></div>
+                    <div class="input-wrap"><input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="..." disabled autocomplete="off"></div>
+                    <div class="swap-timer-wrap"><div class="swap-timer-bar" id="swap-bar-${i}"></div></div>
                 </div>
             `);
         }
@@ -107,7 +114,7 @@
     const stepNames = ["공터", "마을", "도시", "신생국", "개발국", "선진국"];
 
     cityList.forEach(c => { cityLevels.red[c] = 0; cityLevels.blue[c] = 0; });
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v10');
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v11');
 
     function prepareRound() {
         document.getElementById('lobby-screen').style.display = 'none';
@@ -166,21 +173,26 @@
     function handleInput(e, id) {
         if(e.key === 'Enter') {
             const val = e.target.value.trim();
-            const team = currentTeams[id];
+            const myTeam = currentTeams[id];
+            const enemyTeam = (myTeam === 'red') ? 'blue' : 'red';
             
-            if(isAlert) { // 감시 중 입력 페널티: 최신 자원 삭제
+            if(isAlert) { // 감시 중 입력 페널티: 중립화
                 db.child('cards').once('value', s => {
                     const c = s.val(); if(!c) return;
-                    const mine = Object.keys(c).filter(k => c[k].team === team);
-                    if(mine.length > 0) db.child('cards').child(mine[mine.length-1]).remove();
+                    const mine = Object.keys(c).filter(k => c[k].team === myTeam);
+                    if(mine.length > 0) db.child('cards').child(mine[mine.length-1]).remove(); // 삭제하여 중립화
                 });
-            } else if(val === currentBonus) { // 보너스 정답
-                const cat = findCat(val);
-                cityLevels[team][cat] = Math.min(5, cityLevels[team][cat] + 1);
-                db.update({ bonus: "" });
-                alert(`${team.toUpperCase()} 팀 보너스 획득! ${cat} 레벨업!`);
+            } else if(val === currentBonus) { // 보너스 약탈 로직
+                db.child('cards').once('value', s => {
+                    const c = s.val(); if(!c) return;
+                    const enemyCards = Object.keys(c).filter(k => c[k].team === enemyTeam);
+                    const loot = enemyCards.sort(() => 0.5 - Math.random()).slice(0, 3);
+                    loot.forEach(k => db.child('cards').child(k).set({ team: myTeam }));
+                    db.update({ bonus: "" });
+                    alert(`[JACKPOT] ${myTeam.toUpperCase()}팀이 상대 자원 3개를 약탈했습니다!`);
+                });
             } else if(findCat(val)) {
-                db.child('cards').child(val).set({ team: team });
+                db.child('cards').child(val).set({ team: myTeam });
             }
             e.target.value = "";
         }
@@ -199,6 +211,16 @@
                 if(cEl) { cEl.classList.remove('owned-red', 'owned-blue'); cEl.classList.add(`owned-${t}`); }
             }
         });
+        // 중립화된 카드 복구
+        Object.values(activeWords).flat().forEach(w => {
+            if(!persistentCards[w]) {
+                for(let i=1; i<=4; i++) {
+                    const cEl = document.getElementById(`card-${i}-${w}`);
+                    if(cEl) cEl.classList.remove('owned-red', 'owned-blue');
+                }
+            }
+        });
+
         for(let i=1; i<=4; i++) {
             const team = currentTeams[i];
             cityList.forEach((c, idx) => {
@@ -222,28 +244,36 @@
 
     function startTimer() {
         let time = 1200;
+        const totalMax = 1200;
         const intr = setInterval(() => {
             time--;
+            
+            // 1. 상단 전체 프로그레스 바
+            document.getElementById('total-progress-bar').style.width = (time/totalMax)*100 + "%";
             document.getElementById('timer-disp').innerText = (time/10).toFixed(1) + "s";
             
+            // 2. 하단 팀 교체 프로그레스 바 (10초 주기)
+            let swapTime = time % 100;
+            document.querySelectorAll('.swap-timer-bar').forEach(bar => {
+                bar.style.width = (swapTime === 0 ? 0 : swapTime) + "%";
+            });
+
             // 10초마다 팀 교체
             if(time > 0 && time % 100 === 0) {
                 const ts = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
                 db.update({ teams: { 1:ts[0], 2:ts[1], 3:ts[2], 4:ts[3] } });
             }
-            // 20초마다 5초간 감시 (레이저 그리드)
-            let cycle = time % 200;
-            isAlert = (cycle <= 50 && cycle > 0);
 
-            // 30초마다 보너스 문제
+            // 20초마다 감시
+            isAlert = ((time % 200) <= 50 && (time % 200) > 0);
+
+            // 30초마다 보너스
             if(time > 0 && time % 300 === 0) {
                 const allWords = Object.values(cityMap).flat();
-                const bonus = allWords[Math.floor(Math.random()*allWords.length)];
-                db.update({ bonus: bonus });
-                setTimeout(() => db.update({ bonus: "" }), 7000);
+                db.update({ bonus: allWords[Math.floor(Math.random()*allWords.length)] });
             }
 
-            if(time <= 0) { clearInterval(intr); alert("최종 결과 확인!"); }
+            if(time <= 0) { clearInterval(intr); alert("게임 종료! 최종 오각형 결과를 확인하세요."); }
         }, 100);
     }
 </script>
