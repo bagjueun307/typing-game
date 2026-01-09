@@ -2,13 +2,13 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>MAFIA: INDUSTRY WAR - VISUAL FIX</title>
+    <title>MAFIA: EMPIRE STRATEGY FINAL</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --red: #D63031; --blue: #0984E3; --yellow: #FDCB6E; --dark: #0A0A0F; --laser: #FF0000; }
+        :root { --red: #D63031; --blue: #0984E3; --yellow: #FDCB6E; --dark: #0A0A0F; --laser: #FF0000; --ai: #00FFDD; }
         body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', sans-serif; margin: 0; overflow: hidden; }
         
         #top-bar { position: fixed; top: 0; left: 0; right: 0; height: 110px; background: #15151A; border-bottom: 4px solid var(--yellow); display: flex; justify-content: space-around; align-items: center; z-index: 6000; }
@@ -18,50 +18,29 @@
         .monitor { border: 6px solid #333; background: #000; display: flex; flex-direction: column; border-radius: 12px; position: relative; transition: 0.3s; overflow: hidden; }
         .monitor.focused { position: fixed !important; inset: 120px 20px 20px 20px; z-index: 5000; border-width: 12px; }
         
-        /* 팀 표시 - 단색 배경으로 안정감 부여 */
+        /* 팀 표시 */
         .team-indicator { font-size: 1.5rem; padding: 10px; text-align: center; font-weight: bold; }
         .monitor.team-red { border-color: var(--red); }
         .monitor.team-blue { border-color: var(--blue); }
         .monitor.team-red .team-indicator { background: var(--red); color: #fff; }
         .monitor.team-blue .team-indicator { background: var(--blue); color: #fff; }
 
-        /* 입력창 - 팀 색상 반영 */
+        /* 입력창 */
         .input-wrap { display: flex; height: 90px; border-top: 5px solid var(--yellow); }
         .monitor.team-red .input-wrap { background: #4D0000; }
         .monitor.team-blue .input-wrap { background: #002B4D; }
         .input-box { flex: 1; background: rgba(0,0,0,0.5); color: #fff; border: none; font-size: 3rem; text-align: center; outline: none; font-family: 'DungGeunMo'; }
 
-        /* 감시 및 레이저 연출 - 팀 색상과 완전히 다르게! */
-        .laser-overlay { 
-            position: absolute; inset: 0; pointer-events: none; z-index: 2000; 
-            display: flex; align-items: center; justify-content: center; opacity: 0;
-        }
-
-        /* 1초 전 예고: 노란색 깜빡임 + 테두리 */
-        .monitor.warning .laser-overlay { 
-            opacity: 1; 
-            background: rgba(253, 203, 110, 0.2);
-            border: 15px solid var(--yellow);
-            animation: warn-blink 0.2s infinite;
-        }
+        /* 레이저/감시 연출 */
+        .laser-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 2000; display: flex; align-items: center; justify-content: center; opacity: 0; }
+        .monitor.warning .laser-overlay { opacity: 1; background: rgba(253, 203, 110, 0.2); border: 15px solid var(--yellow); animation: warn-blink 0.2s infinite; }
         .monitor.warning .laser-overlay::after { content: "⚠️ SCANNING..."; color: var(--yellow); font-size: 4rem; text-shadow: 0 0 10px #000; }
-
-        /* 감시 상태: 강렬한 레이저 그리드 애니메이션 */
         .monitor.alert .laser-overlay { 
-            opacity: 1; 
-            background: rgba(0,0,0,0.7);
-            background-image: 
-                linear-gradient(rgba(255,0,0,0.8) 2px, transparent 2px),
-                linear-gradient(90deg, rgba(255,0,0,0.8) 2px, transparent 2px);
-            background-size: 40px 40px;
-            border: 15px solid var(--laser);
-            animation: laser-move 0.5s linear infinite;
+            opacity: 1; background: rgba(0,0,0,0.7); border: 15px solid var(--laser);
+            background-image: linear-gradient(rgba(255,0,0,0.8) 2px, transparent 2px), linear-gradient(90deg, rgba(255,0,0,0.8) 2px, transparent 2px);
+            background-size: 40px 40px; animation: laser-move 0.5s linear infinite;
         }
-        .monitor.alert .laser-overlay::after { 
-            content: "🚨 LASER ACTIVE 🚨"; color: #fff; font-size: 5rem; 
-            text-shadow: 0 0 20px #FF0000, 0 0 40px #FF0000;
-            animation: text-pulse 0.1s infinite;
-        }
+        .monitor.alert .laser-overlay::after { content: "🚨 LASER ACTIVE 🚨"; color: #fff; font-size: 5rem; text-shadow: 0 0 20px #FF0000; animation: text-pulse 0.1s infinite; }
 
         @keyframes laser-move { 0% { background-position: 0 0; } 100% { background-position: 40px 40px; } }
         @keyframes warn-blink { 0% { opacity: 0.3; } 100% { opacity: 0.8; } }
@@ -70,33 +49,37 @@
         /* 카드 보드 */
         .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; flex: 1; padding: 10px; background: #000; }
         .card { height: 50px; background: #1A1A1A; border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #888; }
-        .card.owned-red { background: var(--red) !important; color: white; border-color: #fff; font-weight: bold; }
-        .card.owned-blue { background: var(--blue) !important; color: white; border-color: #fff; font-weight: bold; }
+        .card.owned-red { background: var(--red) !important; color: white; border-color: #fff; font-weight: bold; box-shadow: 0 0 8px var(--red); }
+        .card.owned-blue { background: var(--blue) !important; color: white; border-color: #fff; font-weight: bold; box-shadow: 0 0 8px var(--blue); }
 
         /* 오버레이 */
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
         button { padding: 15px 40px; font-family: 'DungGeunMo'; cursor: pointer; background: var(--yellow); border: none; font-size: 1.3rem; margin: 10px; }
         .monitor-start-layer { position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
+        /* 결과창 차트 컨테이너 */
+        .chart-container { display: flex; gap: 50px; margin: 20px 0; background: rgba(255,255,255,0.05); padding: 30px; border-radius: 20px; }
+        .chart-box h2 { margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <div id="lobby-screen" class="overlay">
     <h1 style="color:var(--yellow); font-size: 3rem;">MAFIA INDUSTRY WAR</h1>
-    <div id="ai-briefing" style="background:rgba(0,255,221,0.1); padding:20px; border:1px solid #00FFDD; color:#00FFDD; margin: 20px 0; border-radius:10px;">
-        <strong>[오라클 전략 조언]</strong><br><span id="ai-message">분석 데이터 대기 중...</span>
+    <div id="ai-briefing" style="background:rgba(0,255,221,0.1); padding:20px; border:1px solid var(--ai); color:var(--ai); margin: 20px 0; border-radius:10px; width: 600px;">
+        <strong>[오라클 전략 조언]</strong><br><span id="ai-message">분석 데이터를 대기 중입니다...</span>
     </div>
     <div id="evo-status" style="display:flex; gap:10px; margin-bottom:20px;"></div>
-    <button onclick="prepareRound()">현장 침투 시작</button>
+    <button onclick="prepareRound()">현장 침투 시작 (이어서 하기)</button>
 </div>
 
 <div id="result-screen" class="overlay" style="display:none; z-index:11000;">
-    <h1 style="color:var(--yellow); font-size: 2.5rem;">성장 분석 결과</h1>
-    <div style="display:flex; gap:50px; margin: 20px 0;">
-        <div><h2 style="color:var(--red);">RED</h2><canvas id="final-chart-red" width="300" height="300"></canvas></div>
-        <div><h2 style="color:var(--blue);">BLUE</h2><canvas id="final-chart-blue" width="300" height="300"></canvas></div>
+    <h1 style="color:var(--yellow); font-size: 2.5rem;">[최종 라운드 분석 보고서]</h1>
+    <div class="chart-container">
+        <div class="chart-box"><h2 style="color:var(--red);">RED MAFIA</h2><canvas id="final-chart-red" width="350" height="350"></canvas></div>
+        <div class="chart-box"><h2 style="color:var(--blue);">BLUE MAFIA</h2><canvas id="final-chart-blue" width="350" height="350"></canvas></div>
     </div>
-    <button onclick="closeResult()">데이터 센터로 복귀</button>
+    <button onclick="closeResult()">결과 분석창 닫고 복귀</button>
 </div>
 
 <div id="top-bar">
@@ -132,8 +115,10 @@
     };
 
     let persistentCards = {}, activeWords = {}, active = false, isAlert = false, isWarning = false;
-    let liveCharts = {}, finalCharts = {};
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('mafia_v5_final');
+    let finalCharts = { red: null, blue: null };
+    let currentScores = { red: {}, blue: {} };
+
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('mafia_v6_final');
 
     function prepareRound() {
         document.getElementById('lobby-screen').style.display = 'none';
@@ -204,6 +189,7 @@
                     if(c) c.className = `card owned-${team}`;
                 }
             });
+            currentScores = scores; // 점수 저장
             updateEvoStatus(scores);
         }
     });
@@ -232,17 +218,13 @@
         const intr = setInterval(() => {
             time--;
             document.getElementById('timer-disp').innerText = (time/10).toFixed(1) + "s";
-            
             let cycle = time % 100;
             isWarning = (cycle <= 30 && cycle > 20); 
             isAlert = (cycle <= 20 && cycle > 0); 
-
-            // 상태 클래스 일괄 적용
             document.querySelectorAll('.monitor').forEach(m => {
                 m.classList.toggle('warning', isWarning);
                 m.classList.toggle('alert', isAlert);
             });
-
             if(time > 0 && time % 100 === 0) {
                 const ts = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
                 db.update({ teams: {1:ts[0], 2:ts[1], 3:ts[2], 4:ts[3]} });
@@ -254,13 +236,52 @@
     function endRound() {
         active = false;
         document.getElementById('result-screen').style.display = 'flex';
-        // 차트 렌더링 생략(기존 로직 동일)
+        renderFinalCharts(currentScores); // 최종 점수로 차트 그리기
+    }
+
+    function renderFinalCharts(scores) {
+        const cats = ['에너지','제조','금융','기술','인적자본'];
+        const rData = cats.map(c => scores.red[c]);
+        const bData = cats.map(c => scores.blue[c]);
+
+        const chartOpt = (color, data) => ({
+            type: 'radar',
+            data: {
+                labels: cats,
+                datasets: [{
+                    data: data,
+                    backgroundColor: color + '55',
+                    borderColor: color,
+                    borderWidth: 4,
+                    pointBackgroundColor: color
+                }]
+            },
+            options: {
+                scales: {
+                    r: {
+                        min: 0, max: 10,
+                        ticks: { stepSize: 2, display: false },
+                        grid: { color: 'rgba(255,255,255,0.2)' },
+                        angleLines: { color: 'rgba(255,255,255,0.2)' },
+                        pointLabels: { color: '#fff', font: { size: 14, family: 'DungGeunMo' } }
+                    }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        if(finalCharts.red) finalCharts.red.destroy();
+        if(finalCharts.blue) finalCharts.blue.destroy();
+
+        finalCharts.red = new Chart(document.getElementById('final-chart-red'), chartOpt('#FF4757', rData));
+        finalCharts.blue = new Chart(document.getElementById('final-chart-blue'), chartOpt('#2E86DE', bData));
     }
 
     function closeResult() {
         document.getElementById('result-screen').style.display = 'none';
         document.getElementById('lobby-screen').style.display = 'flex';
         document.querySelectorAll('.monitor-start-layer').forEach(l => l.style.display = 'flex');
+        document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
     }
 
     function updateEvoStatus(scores) {
@@ -268,16 +289,16 @@
         let html = "";
         cats.forEach(c => {
             const count = Math.max(scores.red[c], scores.blue[c]);
-            html += `<div style="padding:10px; border:2px solid ${count>=10?'var(--yellow)':'#444'}">${c}<br>${count}/10</div>`;
+            html += `<div style="padding:10px; border:2px solid ${count>=10?'var(--yellow)':'#444'}; width:80px;">${c}<br>${count}/10</div>`;
         });
         document.getElementById('evo-status').innerHTML = html;
         
         let advice = "모든 분야의 데이터를 확보하세요.";
-        cats.forEach(c => {
+        for(let c of cats) {
             const val = Math.max(scores.red[c], scores.blue[c]);
-            if(val < 10) advice = `${c} 분야가 ${10-val}점 부족합니다! 집중 공격하세요.`;
-        });
-        document.getElementById('ai-message').innerText = advice;
+            if(val < 10) { advice = `[오라클 분석]: **${c}** 분야가 **${10-val}점** 부족합니다! 다음 라운드에서 이 분야를 집중 점령하세요.`; break; }
+        }
+        document.getElementById('ai-message').innerHTML = advice;
     }
 </script>
 </body>
