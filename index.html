@@ -2,138 +2,64 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>NATION BUILDER v16.1 - Tactical Sync</title>
+    <title>NATION BUILDER v17.1 Final</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { 
-            --dark-bg: #050505;
-            --monitor-bg: #111111;
-            --red-team: #600000;
-            --blue-team: #000060;
-            --red-neon: #ff3333;
-            --blue-neon: #00e5ff;
-            --yellow-neon: #ffea00;
-            --text-color: #e0e0e0;
+            --dark: #050505; --red: #FF0000; --blue: #0000FF; 
+            --yellow: #ffea00; --gray: #888;
         }
-        body { 
-            background: var(--dark-bg); 
-            color: var(--text-color); 
-            font-family: 'DungGeunMo', monospace; 
-            margin: 0; 
-            overflow: hidden; 
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+        body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', monospace; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
-        /* 상단 바: 절대 고정 */
-        #top-bar { 
-            height: 80px; 
-            background: #000; 
-            z-index: 9999; /* 최상단 배치 */
-            border-bottom: 2px solid #333; 
-            display: flex; 
-            flex-direction: column;
-        }
+        /* 상단 바 */
+        #top-bar { height: 80px; background: #000; border-bottom: 2px solid #333; display: flex; flex-direction: column; z-index: 1000; }
         #timer-row { display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex: 1; }
-        #timer-disp { font-size: 1.8rem; color: var(--yellow-neon); text-shadow: 0 0 10px var(--yellow-neon); }
-        #swap-info { font-size: 0.8rem; color: #888; }
-        
-        .progress-container { width: 100%; height: 4px; background: #222; position: relative; }
-        #total-bar { height: 100%; width: 100%; background: var(--yellow-neon); box-shadow: 0 0 8px var(--yellow-neon); }
-        #swap-bar-top { height: 100%; width: 100%; background: var(--blue-neon); box-shadow: 0 0 8px var(--blue-neon); }
+        #timer-disp { font-size: 2rem; color: var(--yellow); text-shadow: 0 0 10px var(--yellow); }
+        .progress-container { width: 100%; height: 6px; background: #222; }
+        #total-bar { height: 100%; width: 100%; background: var(--yellow); transition: 0.1s linear; }
 
-        #room-view { 
-            flex: 1; 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            grid-template-rows: 1fr 1fr; 
-            gap: 10px; 
-            padding: 10px; 
-            box-sizing: border-box;
-            position: relative;
-        }
-        
-        .monitor { 
-            border: 3px solid #333; 
-            display: flex; 
-            flex-direction: column; 
-            border-radius: 12px; 
-            position: relative; 
-            overflow: hidden; 
-            background: var(--monitor-bg);
-            transition: all 0.3s ease;
-        }
-        
-        /* 팀 색상 적용 */
-        .monitor.team-red { border-color: var(--red-neon); background-color: var(--red-team) !important; box-shadow: 0 0 15px var(--red-neon); }
-        .monitor.team-blue { border-color: var(--blue-neon); background-color: var(--blue-team) !important; box-shadow: 0 0 15px var(--blue-neon); }
-        
-        /* 확대 시: 상단 바 제외한 영역 꽉 채우기 */
-        .monitor.focused { 
-            position: fixed !important; 
-            top: 85px; left: 10px; right: 10px; bottom: 10px;
-            z-index: 9000; 
-            border-width: 5px; 
-        }
+        /* 메인 게임 뷰 */
+        #room-view { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; padding: 10px; }
+        .monitor { border: 3px solid #333; display: flex; flex-direction: column; border-radius: 12px; position: relative; overflow: hidden; background: #111; transition: 0.3s; }
+        .monitor.team-red { border-color: var(--red); box-shadow: 0 0 15px rgba(255,0,0,0.3); }
+        .monitor.team-blue { border-color: var(--blue); box-shadow: 0 0 15px rgba(0,0,255,0.3); }
+        .monitor.focused { position: fixed !important; top: 85px; left: 10px; right: 10px; bottom: 10px; z-index: 5000; }
 
-        .stats-layer { 
-            display: grid; 
-            grid-template-columns: repeat(5, 1fr); 
-            gap: 4px; padding: 8px; 
-            background: rgba(0,0,0,0.85); 
-            border-bottom: 1px solid rgba(255,255,255,0.1); 
-        }
+        /* 스탯 레이어 */
+        .stats-layer { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; padding: 8px; background: rgba(0,0,0,0.9); border-bottom: 1px solid #333; }
         .stat-item { text-align: center; }
-        .count-val { font-size: 0.9rem; color: var(--blue-neon); font-weight: bold; }
-        
-        .up-btn { 
-            font-family: 'DungGeunMo'; width: 100%; margin-top: 2px; padding: 5px 0; 
-            font-size: 0.6rem; background: #222; color: #fff; border: 1px solid #444; 
-            cursor: pointer; border-radius: 4px; display: flex; flex-direction: column; align-items: center;
-        }
-        .up-btn.ready { 
-            background: var(--yellow-neon); color: #000; 
-            box-shadow: 0 0 10px var(--yellow-neon); animation: blink 0.5s infinite;
-        }
+        .count-val { font-size: 1rem; color: #00ffcc; font-weight: bold; }
+        .up-btn { width: 100%; font-family: 'DungGeunMo'; margin-top: 4px; padding: 5px 0; background: #222; color: #aaa; border: 1px solid #444; border-radius: 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .up-btn.ready { background: var(--yellow); color: #000; border-color: #fff; animation: blink 0.5s infinite; }
 
-        /* 단어 보드 (스크롤 없음) */
-        .board { 
-            display: grid; 
-            grid-template-columns: repeat(14, 1fr); 
-            grid-template-rows: repeat(5, 1fr);
-            gap: 3px; flex: 1; padding: 8px; 
-            align-content: stretch; overflow: hidden; 
-        }
-        .card { 
-            background: rgba(0,0,0,0.4); border: 1px solid #444; 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 0.65rem; color: #fff; border-radius: 3px;
-        }
-        .card.owned-red { background: var(--red-neon) !important; color: #fff; border-color: #fff; }
-        .card.owned-blue { background: var(--blue-neon) !important; color: #000; border-color: #fff; }
+        /* 단어 보드 */
+        .board { display: grid; grid-template-columns: repeat(14, 1fr); grid-template-rows: repeat(5, 1fr); gap: 4px; flex: 1; padding: 10px; overflow: hidden; }
+        .card { background: #1a1a1a; border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #666; border-radius: 3px; font-weight: bold; }
+        .card.owned-red { background: var(--red) !important; color: #fff; border-color: #fff; }
+        .card.owned-blue { background: var(--blue) !important; color: #fff; border-color: #fff; }
 
-        .input-wrap { height: 60px; background: #000; border-top: 2px solid #333; display: flex; }
-        
-        /* 팀별 글자색 동적 적용 */
-        .monitor.team-red .input-box { color: var(--red-neon); text-shadow: 0 0 10px var(--red-neon); }
-        .monitor.team-blue .input-box { color: var(--blue-neon); text-shadow: 0 0 10px var(--blue-neon); }
-        
-        .input-box { 
-            flex: 1; background: transparent; border: none; font-size: 2.5rem; 
-            text-align: center; outline: none; font-family: 'DungGeunMo';
-        }
+        /* 입력창 및 팀별 컬러 */
+        .input-wrap { height: 70px; background: #000; border-top: 2px solid #333; display: flex; }
+        .monitor.team-red .input-box { color: var(--red); text-shadow: 0 0 10px var(--red); }
+        .monitor.team-blue .input-box { color: var(--blue); text-shadow: 0 0 10px var(--blue); }
+        .input-box { flex: 1; background: transparent; border: none; font-size: 3rem; text-align: center; outline: none; font-family: 'DungGeunMo'; }
 
-        /* 감시 레이어 */
-        .alert-layer { position: absolute; inset: 0; z-index: 9500; display: none; align-items: center; justify-content: center; background: rgba(150,0,0,0.8); }
+        /* 감시 및 보너스 */
+        .alert-layer { position: absolute; inset: 0; z-index: 6000; display: none; align-items: center; justify-content: center; background: rgba(150,0,0,0.8); }
         .monitor.alert .alert-layer { display: flex; }
-        .alert-text { font-size: 3rem; color: #fff; border: 6px double #f00; padding: 10px; animation: blink 0.1s infinite; }
+        .alert-text { font-size: 4rem; color: #fff; animation: blink 0.1s infinite; border: 10px double #fff; padding: 20px; }
+        #bonus-pop { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--yellow); color: #000; padding: 15px 40px; font-size: 2.5rem; z-index: 7000; display: none; border: 5px solid #fff; box-shadow: 0 0 20px var(--yellow); }
 
-        .gate { position: absolute; inset: 0; background: #000; z-index: 9990; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .gate-btn { padding: 15px 40px; font-family: 'DungGeunMo'; font-size: 1.8rem; background: var(--blue-neon); border: none; cursor: pointer; border-radius: 8px; box-shadow: 0 0 15px var(--blue-neon); }
+        /* 오각형 결과창 */
+        #result-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        #chart-wrap { width: 600px; height: 600px; background: #111; border: 2px solid #444; padding: 30px; border-radius: 20px; }
+
+        .gate { position: absolute; inset: 0; background: #000; z-index: 8000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .gate-btn { padding: 20px 60px; font-family: 'DungGeunMo'; font-size: 2.5rem; background: var(--yellow); border: none; cursor: pointer; border-radius: 15px; box-shadow: 0 0 20px var(--yellow); }
 
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     </style>
@@ -143,41 +69,40 @@
 <div id="top-bar">
     <div class="progress-container"><div id="total-bar"></div></div>
     <div id="timer-row">
-        <div id="timer-disp">READY</div>
-        <div id="swap-info">SWAP IN: <span id="swap-sec">10</span>s</div>
+        <div id="timer-disp">120.0s</div>
+        <div id="swap-info">TEAM SWAP: <span id="swap-sec">10</span>s</div>
     </div>
-    <div class="progress-container"><div id="swap-bar-top"></div></div>
 </div>
 
 <div id="room-view">
     <script>
-        const cityList = ['발전의 도시','강철의 도시','자본의 도시','미래의 도시','지혜의 도시'];
-        const cityIcons = ["fas fa-spider", "fas fa-home", "fas fa-gun", "fas fa-chess-rook", "fas fa-globe", "fas fa-hat-wizard"];
-        const stepNames = ["SETUP", "HIDEOUT", "ARSENAL", "FORTRESS", "NETWORK", "DOMINATE"];
-
+        const cityList = ['발전','강철','자본','미래','지혜'];
+        const icons = ["fas fa-spider", "fas fa-home", "fas fa-gun", "fas fa-chess-rook", "fas fa-globe", "fas fa-crown"];
+        const steps = ["SETUP", "HIDEOUT", "ARSENAL", "FORTRESS", "NETWORK", "DOMINATE"];
+        
         for(let i=1; i<=4; i++) {
             document.write(`
                 <div class="monitor" id="mon-${i}" onclick="zoomIn(${i})">
-                    <div class="alert-layer"><div class="alert-text">WATCHING...</div></div>
-                    <div class="stats-layer" id="stats-${i}">
+                    <div class="alert-layer"><div class="alert-text">STOP!!</div></div>
+                    <div class="stats-layer">
                         ${cityList.map((c, idx) => `
                             <div class="stat-item">
-                                <div class="city-label">${c.split(' ')[0]}</div>
+                                <div style="font-size:0.7rem; color:#aaa;">${c}</div>
                                 <div class="count-val" id="cnt-${i}-${idx}">0/10</div>
-                                <button class="up-btn" id="up-${i}-${idx}" onclick="requestUpgrade(event, ${i}, '${c}', ${idx})">
-                                    <i class="${cityIcons[0]}" id="icon-${i}-${idx}"></i>
-                                    <span id="step-${i}-${idx}">SETUP</span>
+                                <button class="up-btn" id="up-${i}-${idx}" onclick="requestUpgrade(event, ${i}, ${idx})">
+                                    <i class="${icons[0]}"></i><span id="name-${i}-${idx}">SETUP</span>
                                 </button>
                             </div>
                         `).join('')}
                     </div>
+                    <div id="bonus-pop">BONUS!</div>
                     <div class="gate" id="gate-${i}" style="display:none;">
-                        <h2 style="color:var(--blue-neon)">ENCRYPTED TERMINAL</h2>
-                        <button class="gate-btn" onclick="triggerActualStart(event, ${i})">ACCESS GRANTED</button>
+                        <h1 style="color:var(--yellow)">ACCESS RESTRICTED</h1>
+                        <button class="gate-btn" onclick="triggerStart(event, ${i})">LOGIN</button>
                     </div>
                     <div class="board" id="board-${i}"></div>
                     <div class="input-wrap">
-                        <input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="..." disabled autocomplete="off">
+                        <input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="TYPE HERE..." disabled autocomplete="off">
                     </div>
                 </div>
             `);
@@ -185,35 +110,48 @@
     </script>
 </div>
 
+<div id="result-screen">
+    <h1 style="color:var(--yellow); font-size: 3.5rem; margin-bottom: 20px;">MISSION COMPLETE</h1>
+    <div id="chart-wrap"><canvas id="radarChart"></canvas></div>
+    <button onclick="location.reload()" style="margin-top:30px; padding:15px 40px; font-family:'DungGeunMo'; font-size:1.5rem; cursor:pointer; background:var(--yellow);">RESTART SYSTEM</button>
+</div>
+
 <script>
     const cityMap = {
-        '발전의 도시': ['석탄','태양광','원자력','석유','전기','풍력','수소','배터리','가스','화력','수력','광물','송전탑','에너지'],
-        '강철의 도시': ['철강','금속','자동차','선박','반도체','기계','로봇','화석','화학','부품','공장','엔진','주물','용접'],
-        '자본의 도시': ['은행','주식','채권','투자','자산','환율','금리','펀드','보험','증권','코인','세금','대출','신용'],
-        '미래의 도시': ['AI','소프트웨어','클라우드','서버','보안','코딩','알고리즘','양자','센서','회로','위성','해킹','웹3','빅데이터'],
-        '지혜의 도시': ['교육','의료','대학','훈련','연구','백신','임상','장학','인재','교수','의사','도서관','백과','멘토']
+        '발전': ['석탄','태양광','원자력','석유','전기','풍력','수소','배터리','가스','화력','수력','광물','송전탑','에너지'],
+        '강철': ['철강','금속','자동차','선박','반도체','기계','로봇','화석','화학','부품','공장','엔진','주물','용접'],
+        '자본': ['은행','주식','채권','투자','자산','환율','금리','펀드','보험','증권','코인','세금','대출','신용'],
+        '미래': ['AI','소프트웨어','클라우드','서버','보안','코딩','알고리즘','양자','센서','회로','위성','해킹','웹3','빅데이터'],
+        '지혜': ['교육','의료','대학','훈련','연구','백신','임상','장학','인재','교수','의사','도서관','백과','멘토']
     };
 
-    let persistentCards = {}, activeWords = {}, active = false, isAlert = false;
-    let cityLevels = { red: {}, blue: {} }; 
+    let pCards = {}, active = false, isAlert = false, bonusWord = "";
+    let cityLevels = { red: [0,0,0,0,0], blue: [0,0,0,0,0] }; 
     let currentTeams = { 1:'red', 2:'red', 3:'blue', 4:'blue' };
-    const icons = ["fas fa-spider", "fas fa-home", "fas fa-gun", "fas fa-chess-rook", "fas fa-globe", "fas fa-hat-wizard"];
-    const names = ["SETUP", "HIDEOUT", "ARSENAL", "FORTRESS", "NETWORK", "DOMINATE"];
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_final');
 
-    cityList.forEach(c => { cityLevels.red[c] = 0; cityLevels.blue[c] = 0; });
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v16_1');
-
-    function prepareRound() {
-        const newWords = {};
-        Object.keys(cityMap).forEach(city => newWords[city] = cityMap[city].sort(()=>Math.random()-0.5).slice(0, 14));
-        db.update({ state: 'READY', words: newWords, cards: {}, teams: { 1:'red', 2:'red', 3:'blue', 4:'blue' } });
-        initUI();
+    function triggerStart(e, id) {
+        e.stopPropagation();
+        document.getElementById(`gate-${id}`).style.display = 'none';
+        const inp = document.getElementById(`in-${id}`); inp.disabled = false; inp.focus();
+        if(!active) db.update({ state: 'START', words: Object.values(cityMap).flat() });
     }
 
-    function initUI() {
+    db.on('value', snap => {
+        const d = snap.val(); if(!d) return;
+        if(d.state === 'START' && !active) { active = true; startTimer(); }
+        if(d.words) initBoard(d.words);
+        if(d.teams) currentTeams = d.teams;
+        if(d.cards) pCards = d.cards;
+        if(d.bonus) bonusWord = d.bonus; else bonusWord = "";
+        updateUI();
+    });
+
+    function initBoard(words) {
         for(let i=1; i<=4; i++) {
-            const b = document.getElementById(`board-${i}`); b.innerHTML = "";
-            Object.values(activeWords).flat().forEach(w => {
+            const b = document.getElementById(`board-${i}`);
+            if(b.children.length > 0) continue;
+            words.forEach(w => {
                 const div = document.createElement('div');
                 div.className = 'card'; div.id = `card-${i}-${w}`; div.innerText = w;
                 b.appendChild(div);
@@ -221,87 +159,69 @@
         }
     }
 
-    function zoomIn(id) {
-        if(document.getElementById(`mon-${id}`).classList.contains('focused')) return;
-        document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
-        document.getElementById(`mon-${id}`).classList.add('focused');
-        document.getElementById(`gate-${id}`).style.display = 'flex';
-    }
-
-    function triggerActualStart(e, id) {
-        e.stopPropagation();
-        document.getElementById(`gate-${id}`).style.display = 'none';
-        const input = document.getElementById(`in-${id}`);
-        input.disabled = false; input.focus();
-        if(!active) { prepareRound(); db.update({ state: 'START' }); }
-    }
-
-    db.on('value', snap => {
-        const d = snap.val(); if(!d) return;
-        if(d.words) { activeWords = d.words; if(!active) initUI(); }
-        if(d.state === 'START' && !active) { active = true; startTimer(); }
-        if(d.teams) {
-            currentTeams = d.teams;
-            for(let i=1; i<=4; i++) {
-                const m = document.getElementById(`mon-${i}`);
-                m.className = `monitor team-${d.teams[i]} ${m.classList.contains('focused')?'focused':''} ${isAlert?'alert':''}`;
-            }
-        }
-        if(d.cards) { persistentCards = d.cards; updateStats(); }
-    });
-
     function handleInput(e, id) {
-        const myTeam = currentTeams[id];
+        const team = currentTeams[id];
         if(isAlert) {
-            db.child('cards').once('value', s => {
-                const c = s.val(); if(!c) return;
-                const mine = Object.keys(c).filter(k => c[k].team === myTeam);
-                if(mine.length > 0) db.child('cards').child(mine[mine.length-1]).remove();
-            });
-            e.target.value = ""; return; 
+            const mine = Object.keys(pCards).filter(k => pCards[k] === team);
+            if(mine.length > 0) db.child('cards').child(mine[Math.floor(Math.random()*mine.length)]).remove();
+            e.target.value = ""; return;
         }
         if(e.key === 'Enter') {
             const val = e.target.value.trim();
-            if(findCat(val)) { db.child('cards').child(val).set({ team: myTeam }); }
+            if(val === bonusWord && bonusWord !== "") {
+                const enemy = (team === 'red') ? 'blue' : 'red';
+                const eCards = Object.keys(pCards).filter(k => pCards[k] === enemy);
+                eCards.slice(0, 3).forEach(k => db.child('cards').child(k).set(team));
+                db.update({ bonus: "" });
+            } else if(Object.values(cityMap).flat().includes(val)) {
+                db.child('cards').child(val).set(team);
+            }
             e.target.value = "";
         }
     }
 
-    function findCat(w) { for(let cat in cityMap) if(cityMap[cat].includes(w)) return cat; return null; }
-
-    function updateStats() {
-        const scores = { red: {}, blue: {} };
-        cityList.forEach(c => { scores.red[c] = 0; scores.blue[c] = 0; });
-        Object.keys(persistentCards).forEach(w => {
-            const t = persistentCards[w].team;
-            const cat = findCat(w); if(cat) scores[t][cat]++;
+    function updateUI() {
+        const counts = { red: [0,0,0,0,0], blue: [0,0,0,0,0] };
+        Object.keys(pCards).forEach(w => {
+            const t = pCards[w];
+            let cIdx = -1;
+            Object.keys(cityMap).forEach((c, idx) => { if(cityMap[c].includes(w)) cIdx = idx; });
+            if(cIdx !== -1) counts[t][cIdx]++;
             for(let i=1; i<=4; i++) {
-                const cEl = document.getElementById(`card-${i}-${w}`);
-                if(cEl) { cEl.classList.remove('owned-red', 'owned-blue'); cEl.classList.add(`owned-${t}`); }
+                const card = document.getElementById(`card-${i}-${w}`);
+                if(card) { card.className = `card owned-${t}`; }
             }
         });
 
         for(let i=1; i<=4; i++) {
-            const team = currentTeams[i];
-            cityList.forEach((c, idx) => {
-                const s = scores[team][c]; const l = cityLevels[team][c];
+            const t = currentTeams[i];
+            const mon = document.getElementById(`mon-${i}`);
+            mon.className = `monitor team-${t} ${mon.classList.contains('focused')?'focused':''} ${isAlert?'alert':''}`;
+            cityList.forEach((_, idx) => {
+                const s = counts[t][idx]; const l = cityLevels[t][idx];
                 document.getElementById(`cnt-${i}-${idx}`).innerText = `${s}/${(l+1)*10}`;
-                const btn = document.getElementById(`up-${up-i}-${idx}`); // ID 오타 수정 예정이나 로직상 up-i-idx
-                const upBtn = document.getElementById(`up-${i}-${idx}`);
-                const isReady = s >= (l+1)*10 && l < 5;
-                upBtn.classList.toggle('ready', isReady);
-                document.getElementById(`icon-${i}-${idx}`).className = icons[l];
-                document.getElementById(`step-${i}-${idx}`).innerText = isReady ? "UPGRADE!" : names[l];
+                const btn = document.getElementById(`up-${i}-${idx}`);
+                const ready = s >= (l+1)*10 && l < 5;
+                btn.classList.toggle('ready', ready);
+                btn.querySelector('i').className = icons[l];
+                document.getElementById(`name-${i}-${idx}`).innerText = ready ? "UPGRADE!" : steps[l];
             });
+            const bp = mon.querySelector('#bonus-pop');
+            if(bonusWord) { bp.style.display='block'; bp.innerText=`BONUS: ${bonusWord}`; } else { bp.style.display='none'; }
         }
     }
 
-    function requestUpgrade(e, monId, cityName, btnIdx) {
+    function requestUpgrade(e, id, idx) {
         e.stopPropagation();
-        const team = currentTeams[monId];
-        const l = cityLevels[team][cityName];
-        const s = Object.keys(persistentCards).filter(k => findCat(k) === cityName && persistentCards[k].team === team).length;
-        if(s >= (l+1)*10 && l < 5) { cityLevels[team][cityName]++; updateStats(); }
+        const t = currentTeams[id];
+        const s = Object.keys(pCards).filter(k => cityMap[cityList[idx]].includes(k) && pCards[k] === t).length;
+        if(s >= (cityLevels[t][idx]+1)*10 && cityLevels[t][idx] < 5) { cityLevels[t][idx]++; updateUI(); }
+    }
+
+    function zoomIn(id) {
+        document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
+        document.getElementById(`mon-${id}`).classList.add('focused');
+        document.getElementById(`gate-${id}`).style.display = 'flex';
     }
 
     function startTimer() {
@@ -310,21 +230,45 @@
             time--;
             document.getElementById('total-bar').style.width = (time/1200)*100 + "%";
             document.getElementById('timer-disp').innerText = (time/10).toFixed(1) + "s";
-            let swapPct = (time % 100);
-            document.getElementById('swap-bar-top').style.width = swapPct + "%";
-            document.getElementById('swap-sec').innerText = Math.ceil(swapPct/10);
+            document.getElementById('swap-sec').innerText = Math.ceil((time%100)/10);
 
-            if(time > 0 && time % 100 === 0) {
+            if(time % 100 === 0 && time > 0) {
                 const ts = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
                 db.update({ teams: { 1:ts[0], 2:ts[1], 3:ts[2], 4:ts[3] } });
             }
 
-            const cycle = time % 200; 
+            // 정밀 2초 감시 (15초 주기)
+            const cycle = time % 150;
             isAlert = (cycle < 20 && cycle > 0);
-            for(let i=1; i<=4; i++) document.getElementById(`mon-${i}`).classList.toggle('alert', isAlert);
 
-            if(time <= 0) { clearInterval(intr); alert("OPERATION FINISHED"); }
+            // 보너스 단어 (15초 주기)
+            if(time % 150 === 75) {
+                const all = Object.values(cityMap).flat();
+                db.update({ bonus: all[Math.floor(Math.random()*all.length)] });
+            }
+            if(time % 150 === 130) db.update({ bonus: "" });
+
+            if(time <= 0) { clearInterval(intr); showResult(); }
         }, 100);
+    }
+
+    function showResult() {
+        document.getElementById('result-screen').style.display = 'flex';
+        const ctx = document.getElementById('radarChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: cityList,
+                datasets: [
+                    { label: 'RED SYNDICATE', data: cityLevels.red, backgroundColor: 'rgba(255,0,0,0.3)', borderColor: 'red', borderWidth: 3, pointBackgroundColor: 'red' },
+                    { label: 'BLUE NETWORK', data: cityLevels.blue, backgroundColor: 'rgba(0,0,255,0.3)', borderColor: 'blue', borderWidth: 3, pointBackgroundColor: 'blue' }
+                ]
+            },
+            options: {
+                scales: { r: { min: 0, max: 5, beginAtZero: true, grid: { color: '#444' }, angleLines: { color: '#444' }, ticks: { display: false, stepSize: 1 } } },
+                plugins: { legend: { labels: { color: '#fff', font: { family: 'DungGeunMo', size: 16 } } } }
+            }
+        });
     }
 </script>
 </body>
