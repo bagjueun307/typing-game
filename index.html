@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>NATION BUILDER v15.1</title>
+    <title>NATION BUILDER v15.3</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
@@ -14,57 +14,50 @@
         }
         body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', sans-serif; margin: 0; overflow: hidden; }
         
-        /* 상단 대시보드 */
-        #top-bar { position: fixed; top: 0; left: 0; right: 0; height: 110px; background: #111; z-index: 6000; border-bottom: 3px solid #444; display: flex; flex-direction: column; }
-        #timer-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 30px; flex: 1; }
-        #timer-disp { font-size: 2.5rem; color: var(--yellow); }
-        #swap-info { font-size: 1.2rem; color: #aaa; }
-        .progress-container { width: 100%; height: 6px; background: #222; position: relative; }
+        /* 상단 고정 대시보드 */
+        #top-bar { position: fixed; top: 0; left: 0; right: 0; height: 90px; background: #111; z-index: 6000; border-bottom: 2px solid #444; display: flex; flex-direction: column; }
+        #timer-row { display: flex; justify-content: space-between; align-items: center; padding: 2px 30px; flex: 1; }
+        #timer-disp { font-size: 2.2rem; color: var(--yellow); }
+        #swap-info { font-size: 1rem; color: #aaa; }
+        .progress-container { width: 100%; height: 5px; background: #222; position: relative; }
         #total-bar { height: 100%; width: 100%; background: var(--yellow); transition: 0.1s linear; }
         #swap-bar-top { height: 100%; width: 100%; background: var(--neon-cyan); transition: 0.1s linear; }
 
         /* 게임 뷰 */
-        #room-view { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; padding: 125px 15px 15px 15px; height: 100vh; box-sizing: border-box; }
+        #room-view { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; padding: 100px 15px 15px 15px; height: 100vh; box-sizing: border-box; }
         .monitor { border: 4px solid #333; display: flex; flex-direction: column; border-radius: 15px; position: relative; overflow: hidden; transition: 0.3s; background: #111; }
         .monitor.team-red { background-color: var(--red-bg) !important; border-color: var(--red-neon); }
         .monitor.team-blue { background-color: var(--blue-bg) !important; border-color: var(--blue-neon); }
-        .monitor.focused { position: fixed !important; inset: 120px 20px 20px 20px; z-index: 5000; border-width: 8px; }
+        .monitor.focused { position: fixed !important; inset: 95px 15px 15px 15px; z-index: 5000; border-width: 6px; }
 
-        /* 감시 및 보너스 */
-        .alert-layer { position: absolute; inset: 0; z-index: 4500; display: none; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; background: rgba(255,0,0,0.7); }
-        .monitor.alert .alert-layer { display: flex; }
-        .alert-text { font-size: 4rem; color: #fff; background: #000; padding: 20px 50px; border: 10px double #f00; animation: blink 0.1s infinite; }
-        #bonus-pop { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); background: var(--yellow); color: #000; padding: 25px 60px; font-size: 3.5rem; z-index: 4800; border: 6px solid #fff; display: none; box-shadow: 0 0 50px var(--yellow); }
-
-        /* 영역별 수집 현황 (상단 고정) */
-        .stats-layer { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 12px; background: rgba(0,0,0,0.85); border-bottom: 2px solid rgba(255,255,255,0.2); }
+        /* 영역별 현황 (상단 고정) */
+        .stats-layer { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding: 10px; background: rgba(0,0,0,0.85); border-bottom: 2px solid rgba(255,255,255,0.2); flex-shrink: 0; }
         .stat-item { text-align: center; }
-        .count-val { font-size: 1.3rem; color: var(--neon-cyan); font-weight: bold; text-shadow: 0 0 5px var(--neon-cyan); }
-        .city-label { font-size: 0.85rem; color: #fff; margin-bottom: 2px; }
-        .up-btn { font-family: 'DungGeunMo'; width: 100%; margin-top: 5px; padding: 6px; font-size: 0.8rem; background: #222; color: #777; border: 1px solid #444; cursor: pointer; border-radius: 4px; }
+        .count-val { font-size: 1.2rem; color: var(--neon-cyan); font-weight: bold; text-shadow: 0 0 5px var(--neon-cyan); }
+        .city-label { font-size: 0.8rem; color: #fff; }
+        .up-btn { font-family: 'DungGeunMo'; width: 100%; margin-top: 4px; padding: 5px; font-size: 0.75rem; background: #222; color: #777; border: 1px solid #444; cursor: pointer; border-radius: 4px; }
         .up-btn.ready { background: var(--yellow); color: #000; font-weight: bold; animation: glow 0.5s infinite; }
 
-        /* 단어 보드 (가독성 핵심) */
-        .board { display: grid; grid-template-columns: repeat(14, 1fr); gap: 6px; flex: 1; padding: 20px; align-content: start; background: rgba(0,0,0,0.2); }
-        .card { 
-            aspect-ratio: 1/1; 
-            background: rgba(255, 255, 255, 0.15); /* 단어가 잘 보이도록 배경 밝게 */
-            border: 1px solid rgba(255, 255, 255, 0.3); 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 0.95rem; color: #ffffff; /* 글자색 흰색 고정 */
-            border-radius: 6px; text-align: center; font-weight: bold;
-            text-shadow: 1px 1px 2px #000;
-        }
-        .card.owned-red { background: var(--red-neon) !important; color: #fff !important; border: 2px solid #fff; box-shadow: 0 0 10px var(--red-neon); }
-        .card.owned-blue { background: var(--blue-neon) !important; color: #fff !important; border: 2px solid #fff; box-shadow: 0 0 10px var(--blue-neon); }
+        /* 단어 보드 */
+        .board { display: grid; grid-template-columns: repeat(14, 1fr); gap: 5px; flex: 1; padding: 15px; align-content: start; overflow-y: auto; }
+        .card { aspect-ratio: 1/1; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; color: #ffffff; border-radius: 5px; text-align: center; font-weight: bold; text-shadow: 1px 1px 2px #000; }
+        .card.owned-red { background: var(--red-neon) !important; border: 2px solid #fff; box-shadow: 0 0 10px var(--red-neon); }
+        .card.owned-blue { background: var(--blue-neon) !important; border: 2px solid #fff; box-shadow: 0 0 10px var(--blue-neon); }
 
-        .input-wrap { display: flex; height: 110px; background: #000; border-top: 3px solid #333; }
-        .input-box { flex: 1; background: #000; border: none; font-size: 4.5rem; text-align: center; outline: none; font-family: 'DungGeunMo'; color: #fff; }
+        /* 입력창 */
+        .input-wrap { display: flex; height: 100px; background: #000; border-top: 2px solid #333; flex-shrink: 0; }
+        .input-box { flex: 1; background: #000; border: none; font-size: 4rem; text-align: center; outline: none; font-family: 'DungGeunMo'; color: #fff; }
 
-        .gate { position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 5500; display: flex; align-items: center; justify-content: center; }
-        .gate-btn { padding: 25px 60px; font-family: 'DungGeunMo'; font-size: 2.5rem; background: var(--yellow); border: none; cursor: pointer; border-radius: 15px; box-shadow: 0 8px 0 #b8860b; }
+        /* 감시 레이어 (2초) */
+        .alert-layer { position: absolute; inset: 0; z-index: 5500; display: none; align-items: center; justify-content: center; pointer-events: none; background: rgba(255,0,0,0.8); }
+        .monitor.alert .alert-layer { display: flex; }
+        .alert-text { font-size: 3.5rem; color: #fff; background: #000; padding: 15px 40px; border: 8px double #f00; animation: blink 0.1s infinite; }
+        
+        #bonus-pop { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--yellow); color: #000; padding: 20px 50px; font-size: 3rem; z-index: 5800; border: 5px solid #fff; display: none; box-shadow: 0 0 40px var(--yellow); }
+        .gate { position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 6000; display: flex; align-items: center; justify-content: center; }
+        .gate-btn { padding: 20px 50px; font-family: 'DungGeunMo'; font-size: 2rem; background: var(--yellow); border: none; cursor: pointer; border-radius: 10px; }
 
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         @keyframes glow { 0%, 100% { box-shadow: 0 0 5px var(--yellow); } 50% { box-shadow: 0 0 20px var(--yellow); } }
     </style>
 </head>
@@ -74,7 +67,7 @@
     <div class="progress-container"><div id="total-bar"></div></div>
     <div id="timer-row">
         <div id="timer-disp">READY</div>
-        <div id="swap-info">SHUFFLE IN: <span id="swap-sec">10</span>s</div>
+        <div id="swap-info">팀 셔플까지: <span id="swap-sec">10</span>초</div>
     </div>
     <div class="progress-container"><div id="swap-bar-top"></div></div>
 </div>
@@ -85,8 +78,8 @@
         for(let i=1; i<=4; i++) {
             document.write(`
                 <div class="monitor" id="mon-${i}" onclick="zoomIn(${i})">
-                    <div class="alert-layer"><div class="alert-text">감시 중: 입력 중지!</div></div>
-                    <div class="stats-layer">
+                    <div class="alert-layer"><div class="alert-text">감시 중: 손 떼!</div></div>
+                    <div class="stats-layer" id="stats-${i}">
                         ${cityList.map((c, idx) => `
                             <div class="stat-item">
                                 <div class="city-label">${c.split(' ')[0]}</div>
@@ -97,7 +90,7 @@
                     </div>
                     <div id="bonus-pop">BONUS!</div>
                     <div class="gate" id="gate-${i}" style="display:none;">
-                        <button class="gate-btn" onclick="triggerActualStart(event, ${i})">구역 접속 승인</button>
+                        <button class="gate-btn" onclick="triggerActualStart(event, ${i})">접속 승인</button>
                     </div>
                     <div class="board" id="board-${i}"></div>
                     <div class="input-wrap">
@@ -124,7 +117,7 @@
     const stepNames = ["공터", "마을", "도시", "신생국", "개도국", "선진국"];
 
     cityList.forEach(c => { cityLevels.red[c] = 0; cityLevels.blue[c] = 0; });
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v15_1');
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v15_3');
 
     function prepareRound() {
         const newWords = {};
@@ -179,17 +172,28 @@
         }
     });
 
+    // 입력 처리 로직 (감시 중 패널티 강화)
     function handleInput(e, id) {
+        const myTeam = currentTeams[id];
+
+        // [핵심] 감시 중에 어떤 키든 누르면 즉시 카드 1장 삭제
+        if(isAlert) {
+            db.child('cards').once('value', s => {
+                const c = s.val(); if(!c) return;
+                const mine = Object.keys(c).filter(k => c[k].team === myTeam);
+                if(mine.length > 0) {
+                    const target = mine[mine.length-1]; // 가장 마지막에 얻은 카드
+                    db.child('cards').child(target).remove();
+                }
+            });
+            e.target.value = ""; // 입력창 비우기
+            return; 
+        }
+
+        // 엔터 입력 시 단어 획득
         if(e.key === 'Enter') {
             const val = e.target.value.trim();
-            const myTeam = currentTeams[id];
-            if(isAlert) {
-                db.child('cards').once('value', s => {
-                    const c = s.val(); if(!c) return;
-                    const mine = Object.keys(c).filter(k => c[k].team === myTeam);
-                    if(mine.length > 0) db.child('cards').child(mine[mine.length-1]).remove();
-                });
-            } else if(val === currentBonus && currentBonus !== "") {
+            if(val === currentBonus && currentBonus !== "") {
                 db.child('cards').once('value', s => {
                     const c = s.val(); if(!c) return;
                     const enemyTeam = (myTeam === 'red') ? 'blue' : 'red';
@@ -264,8 +268,9 @@
                 db.update({ teams: { 1:ts[0], 2:ts[1], 3:ts[2], 4:ts[3] } });
             }
 
-            const cycle = time % 400;
-            isAlert = (cycle <= 20 && cycle > 0); // 2초 감시
+            // 정확한 20초 주기 (200틱), 감시는 2초 (20틱)
+            const cycle = time % 400; 
+            isAlert = (cycle <= 20 && cycle > 0); 
             
             if(cycle === 200) {
                 const allWords = Object.values(cityMap).flat();
