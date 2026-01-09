@@ -2,13 +2,13 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>MAFIA: NATION BUILDER</title>
+    <title>NATION BUILDER: STEP UP</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --red: #D63031; --blue: #0984E3; --yellow: #FDCB6E; --dark: #0A0A0F; --laser: #FF0000; --ai: #00FFDD; }
+        :root { --red: #D63031; --blue: #0984E3; --yellow: #FDCB6E; --dark: #0A0A0F; --laser: #FF0000; --ai: #00FFDD; --silver: #bdc3c7; --gold: #f1c40f; }
         body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', sans-serif; margin: 0; overflow: hidden; }
         
         #top-bar { position: fixed; top: 0; left: 0; right: 0; height: 110px; background: #15151A; border-bottom: 4px solid var(--yellow); display: flex; justify-content: space-around; align-items: center; z-index: 6000; }
@@ -18,83 +18,78 @@
         .monitor { border: 6px solid #333; background: #000; display: flex; flex-direction: column; border-radius: 12px; position: relative; transition: 0.3s; overflow: hidden; }
         .monitor.focused { position: fixed !important; inset: 120px 20px 20px 20px; z-index: 5000; border-width: 12px; }
         
-        .team-indicator { font-size: 1.5rem; padding: 10px; text-align: center; font-weight: bold; }
+        .team-indicator { font-size: 1.2rem; padding: 8px; text-align: center; font-weight: bold; }
         .monitor.team-red { border-color: var(--red); }
         .monitor.team-blue { border-color: var(--blue); }
-        .monitor.team-red .team-indicator { background: var(--red); color: #fff; }
-        .monitor.team-blue .team-indicator { background: var(--blue); color: #fff; }
+        .monitor.team-red .team-indicator { background: var(--red); }
+        .monitor.team-blue .team-indicator { background: var(--blue); }
 
-        .input-wrap { display: flex; height: 90px; border-top: 5px solid var(--yellow); }
-        .monitor.team-red .input-wrap { background: #4D0000; }
-        .monitor.team-blue .input-wrap { background: #002B4D; }
-        .input-box { flex: 1; background: rgba(0,0,0,0.5); color: #fff; border: none; font-size: 3rem; text-align: center; outline: none; font-family: 'DungGeunMo'; }
+        /* 업그레이드 버튼 레이어 */
+        .upgrade-layer { display: flex; justify-content: center; gap: 5px; background: #222; padding: 5px; border-top: 1px solid #444; }
+        .up-btn { font-family: 'DungGeunMo'; padding: 5px 10px; font-size: 0.7rem; cursor: pointer; border: none; background: #444; color: #888; border-radius: 4px; }
+        .up-btn.ready { background: var(--yellow); color: #000; font-weight: bold; box-shadow: 0 0 10px var(--yellow); animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
 
-        /* 레이저 연출 */
-        .laser-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 2000; display: flex; align-items: center; justify-content: center; opacity: 0; }
-        .monitor.warning .laser-overlay { opacity: 1; background: rgba(253, 203, 110, 0.2); border: 15px solid var(--yellow); animation: warn-blink 0.2s infinite; }
-        .monitor.alert .laser-overlay { opacity: 1; background: rgba(0,0,0,0.7); border: 15px solid var(--laser); background-image: linear-gradient(rgba(255,0,0,0.8) 2px, transparent 2px), linear-gradient(90deg, rgba(255,0,0,0.8) 2px, transparent 2px); background-size: 40px 40px; animation: laser-move 0.5s linear infinite; }
-        @keyframes laser-move { 0% { background-position: 0 0; } 100% { background-position: 40px 40px; } }
-        @keyframes warn-blink { 0% { opacity: 0.3; } 100% { opacity: 0.8; } }
-
-        .board { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; flex: 1; padding: 10px; background: #000; }
-        .card { height: 50px; background: #1A1A1A; border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #888; }
+        .board { display: grid; grid-template-columns: repeat(14, 1fr); gap: 3px; flex: 1; padding: 10px; background: #000; }
+        .card { height: 35px; background: #1A1A1A; border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: #666; }
         .card.owned-red { background: var(--red) !important; color: white; border-color: #fff; }
         .card.owned-blue { background: var(--blue) !important; color: white; border-color: #fff; }
 
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        button { padding: 15px 40px; font-family: 'DungGeunMo'; cursor: pointer; background: var(--yellow); border: none; font-size: 1.3rem; margin: 10px; }
+        button.main-btn { padding: 15px 40px; font-family: 'DungGeunMo'; cursor: pointer; background: var(--yellow); border: none; font-size: 1.3rem; margin: 10px; }
         
-        /* 결과창 차트 강화 */
-        .chart-grid { display: flex; gap: 30px; margin-top: 20px; }
-        .chart-item { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 2px solid #444; }
-        .rank-badge { font-size: 1.5rem; color: var(--ai); margin: 10px 0; border: 1px solid var(--ai); padding: 5px 15px; }
-        .ai-tip { font-size: 1rem; color: #ccc; margin-top: 10px; max-width: 300px; line-height: 1.4; }
+        /* 결과창 차트 */
+        .chart-grid { display: flex; gap: 20px; }
+        .chart-item { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; border: 2px solid #444; width: 420px; }
+        .rank-badge { font-size: 1.4rem; color: var(--ai); margin: 5px 0; border: 1px solid var(--ai); padding: 5px; }
+        .oracle-memo { background: rgba(0, 255, 221, 0.1); border-left: 5px solid var(--ai); padding: 10px; margin-top: 10px; font-size: 0.85rem; text-align: left; }
     </style>
 </head>
 <body>
 
 <div id="lobby-screen" class="overlay">
-    <h1 style="color:var(--yellow); font-size: 3rem;">NATION BUILDER: 5 CITIES</h1>
+    <h1 style="color:var(--yellow); font-size: 3rem;">NATION BUILDER: EVOLUTION</h1>
     <div id="evo-status" style="display:flex; gap:10px; margin-bottom:20px;"></div>
-    <button onclick="prepareRound()">도시 건설 현장으로 이동</button>
+    <button class="main-btn" onclick="prepareRound()">새 자원 구역 진입</button>
 </div>
 
 <div id="result-screen" class="overlay" style="display:none; z-index:11000;">
-    <h1 style="color:var(--yellow); font-size: 2.2rem;">[국가 발전 보고서]</h1>
+    <h1 style="color:var(--yellow); font-size: 2rem;">[국가 도시 개발 보고서]</h1>
     <div class="chart-grid">
         <div class="chart-item" style="border-color: var(--red);">
             <h2 style="color:var(--red);">RED TEAM</h2>
-            <div id="rank-red" class="rank-badge">미개발국</div>
-            <canvas id="final-chart-red" width="320" height="320"></canvas>
-            <div id="tip-red" class="ai-tip">AI 분석 중...</div>
+            <div id="rank-red" class="rank-badge">-</div>
+            <canvas id="final-chart-red" width="380" height="300"></canvas>
+            <div id="tip-red" class="oracle-memo"></div>
         </div>
         <div class="chart-item" style="border-color: var(--blue);">
             <h2 style="color:var(--blue);">BLUE TEAM</h2>
-            <div id="rank-blue" class="rank-badge">미개발국</div>
-            <canvas id="final-chart-blue" width="320" height="320"></canvas>
-            <div id="tip-blue" class="ai-tip">AI 분석 중...</div>
+            <div id="rank-blue" class="rank-badge">-</div>
+            <canvas id="final-chart-blue" width="380" height="300"></canvas>
+            <div id="tip-blue" class="oracle-memo"></div>
         </div>
     </div>
-    <button onclick="closeResult()">다음 라운드 진행</button>
+    <button class="main-btn" onclick="closeResult()">다음 라운드 진행</button>
 </div>
 
-<div id="top-bar">
-    <div id="timer-disp">120.0s</div>
-</div>
+<div id="top-bar"><div id="timer-disp">120.0s</div></div>
 
 <div id="room-view">
     <script>
+        const cities = ['발전의 도시','강철의 도시','자본의 도시','미래의 도시','지혜의 도시'];
         for(let i=1; i<=4; i++) {
             document.write(`
                 <div class="monitor" id="mon-${i}" onclick="focusMon(${i})">
                     <div class="team-indicator" id="team-text-${i}">접속 대기</div>
-                    <div class="laser-overlay"></div>
+                    <div class="upgrade-layer">
+                        ${cities.map((c, idx) => `<button class="up-btn" id="up-${i}-${idx}" onclick="requestUpgrade(event, ${i}, '${c}', ${idx})">${c.split(' ')[0]} UP</button>`).join('')}
+                    </div>
                     <div class="monitor-start-layer" id="layer-${i}">
-                        <button id="btn-start-${i}" onclick="triggerStart(event, ${i})" style="display:none;">건설 시작</button>
+                        <button class="main-btn" id="btn-start-${i}" onclick="triggerStart(event, ${i})" style="display:none;">건설 시작</button>
                     </div>
                     <div id="cd-${i}" style="position:absolute; inset:0; display:none; align-items:center; justify-content:center; font-size:12rem; color:var(--yellow); z-index:4000; background:rgba(0,0,0,0.8);">3</div>
                     <div class="board" id="board-${i}"></div>
-                    <div class="input-wrap"><input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="도시 선택" disabled></div>
+                    <div class="input-wrap"><input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="자원 단어 입력" disabled></div>
                 </div>
             `);
         }
@@ -103,23 +98,32 @@
 
 <script>
     const cityMap = {
-        '발전의 도시': ['석탄','태양광','원자력','석유','전기','풍력','수소','배터리','가스','화력'],
-        '강철의 도시': ['철강','금속','자동차','선박','반도체','기계','로봇','화석','화학','부품'],
-        '자본의 도시': ['은행','주식','채권','투자','자산','환율','금리','펀드','보험','증권'],
-        '미래의 도시': ['AI','소프트웨어','클라우드','서버','보안','코딩','알고리즘','양자','센서','회로'],
-        '지혜의 도시': ['교육','의료','대학','훈련','연구','백신','임상','장학','인재','교수']
+        '발전의 도시': ['석탄','태양광','원자력','석유','전기','풍력','수소','배터리','가스','화력','수력','광물','송전탑','에너지'],
+        '강철의 도시': ['철강','금속','자동차','선박','반도체','기계','로봇','화석','화학','부품','공장','엔진','주물','용접'],
+        '자본의 도시': ['은행','주식','채권','투자','자산','환율','금리','펀드','보험','증권','코인','세금','대출','신용'],
+        '미래의 도시': ['AI','소프트웨어','클라우드','서버','보안','코딩','알고리즘','양자','센서','회로','위성','해킹','웹3','빅데이터'],
+        '지혜의 도시': ['교육','의료','대학','훈련','연구','백신','임상','장학','인재','교수','의사','도서관','백과','멘토']
     };
 
-    let persistentCards = {}, activeWords = {}, active = false, isAlert = false, isWarning = false;
-    let finalCharts = { red: null, blue: null };
-    let currentScores = { red: {}, blue: {} };
+    let usedWords = new Set();
+    let persistentCards = {}, activeWords = {}, active = false;
+    let cityLevels = { red: {}, blue: {} }; // 0:공터, 1:마을, 2:도시
+    
+    // 초기화
+    Object.keys(cityMap).forEach(c => { cityLevels.red[c] = 0; cityLevels.blue[c] = 0; });
 
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_builder_v1');
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_builder_v8');
 
     function prepareRound() {
         document.getElementById('lobby-screen').style.display = 'none';
         const newWords = {};
-        Object.keys(cityMap).forEach(cat => newWords[cat] = [...cityMap[cat]].sort(()=>Math.random()-0.5));
+        Object.keys(cityMap).forEach(city => {
+            let available = cityMap[city].filter(w => !usedWords.has(w));
+            if(available.length < 14) { usedWords.clear(); available = cityMap[city]; }
+            const selected = available.sort(() => Math.random() - 0.5).slice(0, 14);
+            selected.forEach(w => usedWords.add(w));
+            newWords[city] = selected;
+        });
         activeWords = newWords;
         const ts = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
         db.update({ state: 'READY', teams: {1:ts[0], 2:ts[1], 3:ts[2], 4:ts[3]} });
@@ -163,47 +167,79 @@
         }, 1000);
     }
 
+    // 업그레이드 요청
+    function requestUpgrade(e, monId, cityName, btnIdx) {
+        e.stopPropagation();
+        const team = document.getElementById(`mon-${monId}`).classList.contains('team-red') ? 'red' : 'blue';
+        const currentCount = currentScores[team][cityName];
+        const currentLvl = cityLevels[team][cityName];
+
+        // 마을(1단계) 조건: 단어 10개 & Level 0
+        if(currentLvl === 0 && currentCount >= 10) {
+            cityLevels[team][cityName] = 1;
+            db.child('levels').child(team).child(cityName).set(1);
+            alert(`[${team.toUpperCase()}] ${cityName}이(가) '마을'로 승격되었습니다!`);
+        } 
+        // 도시(2단계) 조건: 단어 20개 & Level 1 (누적치 기준)
+        else if(currentLvl === 1 && currentCount >= 20) {
+            cityLevels[team][cityName] = 2;
+            db.child('levels').child(team).child(cityName).set(2);
+            alert(`[${team.toUpperCase()}] ${cityName}이(가) '도시'로 완성되었습니다!`);
+        } else {
+            alert("자원이 부족하거나 이미 최고 단계입니다.");
+        }
+    }
+
+    let currentScores = { red: {}, blue: {} };
     db.on('value', snap => {
         const d = snap.val(); if(!d) return;
         if(d.state === 'START' && !active) { active = true; startTimer(); }
         if(d.teams) {
             for(let i=1; i<=4; i++) {
                 const m = document.getElementById(`mon-${i}`);
-                m.className = `monitor team-${d.teams[i]} ${m.classList.contains('focused')?'focused':''} ${isWarning?'warning':''} ${isAlert?'alert':''}`;
+                m.className = `monitor team-${d.teams[i]} ${m.classList.contains('focused')?'focused':''}`;
                 document.getElementById(`team-text-${i}`).innerText = `[소속: ${d.teams[i].toUpperCase()} TEAM]`;
             }
         }
+        if(d.levels) { cityLevels = d.levels; }
         if(d.cards) {
             persistentCards = d.cards;
-            const scores = { red: { '발전의 도시':0,'강철의 도시':0,'자본의 도시':0,'미래의 도시':0,'지혜의 도시':0 }, blue: { '발전의 도시':0,'강철의 도시':0,'자본의 도시':0,'미래의 도시':0,'지혜의 도시':0 } };
+            const scores = { red: {}, blue: {} };
+            Object.keys(cityMap).forEach(c => { scores.red[c] = 0; scores.blue[c] = 0; });
             Object.keys(persistentCards).forEach(w => {
                 const team = persistentCards[w].team;
                 const cat = findCat(w);
                 if(cat && team !== 'neutral') scores[team][cat]++;
-                for(let i=1; i<=4; i++) {
-                    const c = document.getElementById(`card-${i}-${w}`);
-                    if(c) c.className = `card owned-${team}`;
-                }
             });
             currentScores = scores;
-            updateEvoStatus(scores);
+            updateUIByScore();
         }
     });
+
+    function updateUIByScore() {
+        for(let i=1; i<=4; i++) {
+            const team = document.getElementById(`mon-${i}`).classList.contains('team-red') ? 'red' : 'blue';
+            Object.keys(cityMap).forEach((cityName, idx) => {
+                const btn = document.getElementById(`up-${i}-${idx}`);
+                const score = currentScores[team][cityName];
+                const lvl = cityLevels[team][cityName] || 0;
+                
+                btn.classList.remove('ready');
+                if((lvl === 0 && score >= 10) || (lvl === 1 && score >= 20)) {
+                    btn.classList.add('ready');
+                }
+                const statusTxt = lvl === 0 ? "공터" : (lvl === 1 ? "마을" : "도시");
+                btn.innerText = `${cityName.split(' ')[0]} (${statusTxt})`;
+            });
+        }
+    }
 
     function findCat(w) { for(let cat in cityMap) if(cityMap[cat].includes(w)) return cat; return null; }
 
     function handleInput(e, id) {
-        const team = document.getElementById(`mon-${id}`).classList.contains('team-red') ? 'red' : 'blue';
-        if(isAlert) {
-            db.child('cards').once('value', s => {
-                const c = s.val(); if(!c) return;
-                const mine = Object.keys(c).filter(k => c[k].team === team);
-                if(mine.length > 0) db.child('cards').child(mine[mine.length-1]).remove();
-            });
-            e.target.value = ""; return;
-        }
         if(e.key === 'Enter') {
             const val = e.target.value.trim();
+            const team = document.getElementById(`mon-${id}`).classList.contains('team-red') ? 'red' : 'blue';
             if(findCat(val)) db.child('cards').child(val).set({ team: team });
             e.target.value = "";
         }
@@ -214,17 +250,6 @@
         const intr = setInterval(() => {
             time--;
             document.getElementById('timer-disp').innerText = (time/10).toFixed(1) + "s";
-            let cycle = time % 100;
-            isWarning = (cycle <= 30 && cycle > 20); 
-            isAlert = (cycle <= 20 && cycle > 0); 
-            document.querySelectorAll('.monitor').forEach(m => {
-                m.classList.toggle('warning', isWarning);
-                m.classList.toggle('alert', isAlert);
-            });
-            if(time > 0 && time % 100 === 0) {
-                const ts = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
-                db.update({ teams: {1:ts[0], 2:ts[1], 3:ts[2], 4:ts[3]} });
-            }
             if(time <= 0) { clearInterval(intr); endRound(); }
         }, 100);
     }
@@ -232,44 +257,38 @@
     function endRound() {
         active = false;
         document.getElementById('result-screen').style.display = 'flex';
-        renderFinalCharts(currentScores);
+        renderFinalCharts();
     }
 
-    function renderFinalCharts(scores) {
-        const cities = Object.keys(cityMap);
+    function renderFinalCharts() {
         ['red', 'blue'].forEach(team => {
-            const data = cities.map(c => scores[team][c]);
-            const upgradedCount = data.filter(v => v >= 10).length;
+            const cities = Object.keys(cityMap);
+            const levels = cities.map(c => cityLevels[team][c] || 0);
+            const totalLevel = levels.reduce((a, b) => a + b, 0);
             
-            // 등급 및 조언 결정
             let rank = "미개발국";
-            if(upgradedCount === 5) rank = "선진국 (🏆)";
-            else if(upgradedCount >= 3) rank = "개발도상국";
+            if(totalLevel >= 10) rank = "선진국 (🏆)";
+            else if(totalLevel >= 5) rank = "개발도상국";
             
-            let weakCity = "";
-            let minVal = 10;
-            cities.forEach(c => { if(scores[team][c] < minVal) { minVal = scores[team][c]; weakCity = c; } });
-            
-            let tip = upgradedCount === 5 ? "최고의 국가를 건설했습니다!" : `${weakCity}에 단어 ${10-minVal}개가 더 필요합니다. 이곳을 공략하세요!`;
-
             document.getElementById(`rank-${team}`).innerText = rank;
-            document.getElementById(`tip-${team}`).innerText = `오라클: "${tip}"`;
+            document.getElementById(`tip-${team}`).innerHTML = `<strong>💡 오라클 분석:</strong><br>
+                현재 건설 점수: ${totalLevel}점<br>
+                ${rank === "선진국 (🏆)" ? "완벽한 국가입니다!" : "단어를 모아 [UPGRADE] 버튼을 눌러야 등급이 올라갑니다!"}`;
 
             const ctx = document.getElementById(`final-chart-${team}`);
-            if(finalCharts[team]) finalCharts[team].destroy();
-            finalCharts[team] = new Chart(ctx, {
+            new Chart(ctx, {
                 type: 'radar',
                 data: {
-                    labels: cities.map(c => `${c} (부족:${10-scores[team][c]})`),
+                    labels: cities.map(c => `${c} (Lv.${cityLevels[team][c] || 0})`),
                     datasets: [{
-                        data: data,
-                        backgroundColor: (team==='red'?'#D6303155':'#0984E355'),
+                        data: levels,
+                        backgroundColor: (team==='red'?'rgba(214, 48, 49, 0.4)':'rgba(9, 132, 227, 0.4)'),
                         borderColor: (team==='red'?'#D63031':'#0984E3'),
                         borderWidth: 5
                     }]
                 },
                 options: {
-                    scales: { r: { min: 0, max: 10, ticks: { display: false }, grid: { color: '#444' }, pointLabels: { color: '#fff', font: { size: 12, family: 'DungGeunMo' } } } },
+                    scales: { r: { min: 0, max: 2, ticks: { stepSize: 1, display: false }, pointLabels: { color: '#fff' } } },
                     plugins: { legend: { display: false } }
                 }
             });
@@ -279,17 +298,6 @@
     function closeResult() {
         document.getElementById('result-screen').style.display = 'none';
         document.getElementById('lobby-screen').style.display = 'flex';
-        document.querySelectorAll('.monitor-start-layer').forEach(l => l.style.display = 'flex');
-        document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
-    }
-
-    function updateEvoStatus(scores) {
-        let html = "";
-        Object.keys(cityMap).forEach(c => {
-            const count = Math.max(scores.red[c], scores.blue[c]);
-            html += `<div style="padding:10px; border:2px solid ${count>=10?'var(--yellow)':'#444'}; width:90px; font-size:0.8rem;">${c}<br>${count}/10</div>`;
-        });
-        document.getElementById('evo-status').innerHTML = html;
     }
 </script>
 </body>
