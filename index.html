@@ -2,84 +2,95 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>NATION BUILDER v18.9 - Full Integrated Edition</title>
+    <title>NATION BUILDER v19.5 - Tactical Territory</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --dark: #050505; --red: #FF0000; --blue: #0000FF; --red-fade: rgba(255, 0, 0, 0.2); --blue-fade: rgba(0, 0, 255, 0.2); --yellow: #ffea00; }
+        :root { --dark: #050505; --red: #ff0000; --blue: #0066ff; --yellow: #ffea00; }
         body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', monospace; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
-        /* 결과 화면 */
-        #result-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; }
-        #chart-wrap { width: 550px; height: 550px; background: rgba(255,255,255,0.02); padding: 30px; border-radius: 50%; }
+        /* 상단 네비게이션 */
+        #top-bar { height: 70px; background: #000; border-bottom: 3px solid #333; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; }
+        #timer-disp { font-size: 2.8rem; color: var(--yellow); text-shadow: 0 0 10px var(--yellow); }
 
-        /* 상단 바 */
-        #top-bar { height: 80px; background: #000; border-bottom: 2px solid #333; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; z-index: 1000; }
-        #timer-disp { font-size: 2.5rem; color: var(--yellow); }
+        /* 모니터 시스템 */
+        #room-view { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; padding: 10px; background: #111; }
+        .monitor { border: 5px solid #444; position: relative; display: flex; flex-direction: column; background: #000; transition: all 0.3s; overflow: hidden; }
+        
+        /* 팀 컬러 가시성 (배경 전체) */
+        .monitor.team-red { border-color: var(--red); background: linear-gradient(180deg, #300 0%, #000 100%); }
+        .monitor.team-blue { border-color: var(--blue); background: linear-gradient(180deg, #001a4d 0%, #000 100%); }
+        .monitor.focused { position: fixed !important; inset: 80px 10px 10px 10px; z-index: 5000; border-width: 8px; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
 
-        /* 모니터 뷰 */
-        #room-view { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; padding: 15px; }
-        .monitor { border: 4px solid #333; position: relative; display: flex; flex-direction: column; background: #111; overflow: hidden; transition: 0.3s; }
-        .monitor.team-red { border-color: var(--red); box-shadow: inset 0 0 80px var(--red-fade); }
-        .monitor.team-blue { border-color: var(--blue); box-shadow: inset 0 0 80px var(--blue-fade); }
-        .monitor.focused { position: fixed !important; inset: 90px 20px 20px 20px; z-index: 5000; border-color: var(--yellow); }
+        /* 미사일 패널 - 확대 모니터 전용 */
+        .missile-panel {
+            position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%);
+            background: rgba(255, 0, 0, 0.95); padding: 20px 40px; border: 4px solid white;
+            display: none; flex-direction: column; align-items: center; z-index: 6000;
+            box-shadow: 0 0 40px rgba(255,0,0,1); border-radius: 10px;
+        }
 
         /* 시작 게이트 */
-        .gate { position: absolute; inset: 0; background: rgba(0,0,0,0.85); z-index: 8000; display: none; align-items: center; justify-content: center; }
-        .start-btn { padding: 25px 60px; font-family: 'DungGeunMo'; font-size: 2.5rem; background: var(--yellow); border: none; cursor: pointer; animation: blink 0.8s infinite; }
+        .gate { position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 8000; display: none; align-items: center; justify-content: center; }
+        .start-btn { padding: 25px 60px; font-size: 2.5rem; background: var(--yellow); border: none; cursor: pointer; font-family: 'DungGeunMo'; border-radius: 10px; box-shadow: 0 5px 0 #b3a400; }
 
-        /* 미사일 사보타주 */
-        .sabotage-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 9000; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; border: 5px solid var(--red); }
-        
-        .board { flex: 1; display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; padding: 15px; }
-        .card { background: rgba(255,255,255,0.05); border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #888; border-radius: 4px; }
-        .card.owned-red { background: var(--red) !important; color: #fff; box-shadow: 0 0 10px var(--red); }
-        .card.owned-blue { background: var(--blue) !important; color: #fff; box-shadow: 0 0 10px var(--blue); }
+        /* 영토 보드 */
+        .board { flex: 1; display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; padding: 10px; }
+        .card { background: rgba(255,255,255,0.05); font-size: 0.8rem; display: flex; align-items: center; justify-content: center; border-radius: 3px; border: 1px solid #222; transition: 0.2s; color: #666; }
+        .card.owned-red { background: var(--red) !important; color: #fff; border: none; box-shadow: 0 0 10px var(--red); }
+        .card.owned-blue { background: var(--blue) !important; color: #fff; border: none; box-shadow: 0 0 10px var(--blue); }
 
-        .input-wrap { height: 80px; border-top: 2px solid #333; display: flex; }
-        .input-box { flex: 1; background: transparent; border: none; font-size: 3rem; text-align: center; outline: none; font-family: 'DungGeunMo'; color: #fff; }
+        /* 입력창 */
+        .input-wrap { height: 80px; display: flex; border-top: 3px solid #333; background: #000; }
+        .input-box { flex: 1; background: transparent; border: none; font-size: 3rem; text-align: center; color: #fff; font-family: 'DungGeunMo'; outline: none; }
+        .team-red .input-box { color: #ffcccc; text-shadow: 0 0 10px var(--red); }
+        .team-blue .input-box { color: #cce0ff; text-shadow: 0 0 10px var(--blue); }
 
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        /* 결과 화면 (오각형 영토 맵) */
+        #result-screen { position: fixed; inset: 0; background: radial-gradient(circle, #222 0%, #000 100%); z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        #chart-container { width: 600px; height: 600px; background: rgba(255,255,255,0.02); padding: 30px; border-radius: 50%; border: 2px solid #333; position: relative; }
+
+        @keyframes blink { 50% { opacity: 0.4; } }
+        .blink { animation: blink 0.6s infinite; }
     </style>
 </head>
 <body>
 
 <div id="top-bar">
-    <div id="timer-disp">02:00</div>
-    <div id="status-msg" style="color:#888;">SELECT MONITOR TO INITIALIZE</div>
-    <div style="color:var(--yellow);">NATION BUILDER v18.9</div>
+    <div id="timer-disp">READY</div>
+    <div id="status-msg" style="color:var(--yellow); font-size: 1.2rem;">MONITOR SELECTION REQUIRED</div>
+    <div style="color:#555;">NATION BUILDER Final v19.5</div>
 </div>
 
 <div id="result-screen">
-    <h1 style="color:var(--yellow); font-size: 3rem;">ROUND ANALYSIS</h1>
-    <div id="chart-wrap"><canvas id="radarChart"></canvas></div>
-    <button style="margin-top:30px; padding:15px 60px; font-family:'DungGeunMo'; background:var(--yellow); border:none; cursor:pointer; font-size:1.5rem;" onclick="closeResult()">결과 닫기 및 다음 라운드 준비</button>
+    <h1 style="color:var(--yellow); font-size:3.5rem; text-shadow: 0 0 20px var(--yellow); margin-bottom: 10px;">TERRITORY ANALYSIS</h1>
+    <div id="chart-container"><canvas id="radarChart"></canvas></div>
+    <button onclick="closeResult()" style="margin-top:30px; padding:20px 60px; background:var(--yellow); font-family:'DungGeunMo'; font-size:1.5rem; border:none; cursor:pointer; font-weight:bold;">영토 분석 완료 및 대기</button>
 </div>
 
 <div id="room-view">
     <script>
         const cityNames = ['발전','강철','자본','미래','지혜'];
+        const rankLabels = ['공터','마을','도시','개도국','선진국'];
         for(let i=1; i<=4; i++) {
             document.write(`
                 <div class="monitor" id="mon-${i}" onclick="zoomIn(${i})">
-                    <div class="gate" id="gate-${i}">
-                        <button class="start-btn" onclick="requestStart(event)">START MISSION</button>
+                    <div class="gate" id="gate-${i}"><button class="start-btn" onclick="requestStart(event)">START MISSION</button></div>
+                    
+                    <div class="missile-panel" id="mis-panel-${i}">
+                        <div id="mis-text-${i}" style="font-size:1.5rem; color:white; margin-bottom:15px; text-align:center;"></div>
+                        <button onclick="launchMissile(event, ${i})" style="padding:15px 30px; background:white; color:red; border:none; font-family:'DungGeunMo'; font-weight:bold; cursor:pointer; font-size:1.2rem;">전술 미사일 발사 (카드 7장 소모)</button>
+                        <button onclick="closeSabotage(event, ${i})" style="margin-top:10px; background:transparent; color:#ffcccc; border:none; cursor:pointer;">발사 취소</button>
                     </div>
-                    <div class="sabotage-overlay" id="sab-${i}">
-                        <div style="font-size:2rem; color:red; margin-bottom:20px;">⚠️ 적국 성장 감지!</div>
-                        <div id="sab-text-${i}" style="margin-bottom:20px;"></div>
-                        <button style="padding:15px 30px; background:red; color:white; border:none; font-family:'DungGeunMo'; cursor:pointer;" onclick="launchMissile(event, ${i})">전술 미사일 발사 (카드 7장 소모)</button>
-                        <button style="margin-top:10px; background:transparent; color:#555; border:none; cursor:pointer;" onclick="closeSabotage(event, ${i})">무시하기</button>
-                    </div>
-                    <div class="stats-header" style="padding:10px; display:flex; justify-content:space-around; background:rgba(0,0,0,0.5);">
-                        ${cityNames.map((c, idx) => `<div id="lvl-${i}-${idx}" style="font-size:0.8rem; color:var(--yellow);">${c}: Lv.0</div>`).join('')}
+
+                    <div style="display:flex; justify-content:space-around; background:rgba(0,0,0,0.6); padding:8px; border-bottom:1px solid #333;">
+                        ${cityNames.map((c, idx) => `<span id="lvl-${i}-${idx}" style="font-size:0.8rem; color:var(--yellow);">${c}:공터</span>`).join('')}
                     </div>
                     <div class="board" id="board-${i}"></div>
                     <div class="input-wrap">
-                        <input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="READY" disabled autocomplete="off">
+                        <input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="INIT..." disabled autocomplete="off">
                     </div>
                 </div>
             `);
@@ -88,30 +99,29 @@
 </div>
 
 <script>
-    // --- 설정 ---
+    // --- 1. Firebase & 초기 데이터 설정 ---
+    // 사용자님의 Firebase 정보를 이곳에 입력하세요.
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v19_5');
+    
     const wordPool = {
-        '발전': ['석탄','태양광','원자력','석유','전기','풍력','수소'],
-        '강철': ['철강','금속','자동차','선박','반도체','기계','로봇'],
-        '자본': ['은행','주식','채권','투자','자산','환율','금리'],
-        '미래': ['AI','소프트웨어','클라우드','서버','보안','코딩','알고리즘'],
-        '지혜': ['교육','의료','대학','훈련','연구','백신','임상']
+        '발전': ['석탄','태양광','원자력','석유','전기','풍력','수력','가스','배터리','탄소'],
+        '강철': ['철강','엔진','반도체','로봇','자동차','선박','기계','합금','금속','용접'],
+        '자본': ['은행','주식','채권','투자','환율','금리','예산','보험','증권','세금'],
+        '미래': ['AI','서버','보안','코딩','양자','클라우드','센서','해킹','드론','위성'],
+        '지혜': ['교육','의료','대학','연구','백신','철학','역사','과학','논리','법률']
     };
-    
-    // Firebase를 실제 사용자님의 정보로 연결하세요.
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_final');
-    
+
     let active = false, pCards = {}, currentWords = [], timerIntr = null;
     let cityLevels = { red: [0,0,0,0,0], blue: [0,0,0,0,0] };
     let currentTeams = { 1:'red', 2:'red', 3:'blue', 4:'blue' };
-    let sabotageTarget = null;
-    let radarChart = null;
+    let focusedId = null, sabotageTarget = null, radarChart = null;
 
-    // --- 기능 로직 ---
+    // --- 2. 게임 상태 관리 ---
 
     function zoomIn(id) {
+        focusedId = id;
         document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
-        const mon = document.getElementById(`mon-${id}`);
-        mon.classList.add('focused');
+        document.getElementById(`mon-${id}`).classList.add('focused');
         if(!active) {
             document.querySelectorAll('.gate').forEach(g => g.style.display = 'none');
             document.getElementById(`gate-${id}`).style.display = 'flex';
@@ -120,9 +130,9 @@
 
     function requestStart(e) {
         e.stopPropagation();
-        const words = [];
-        Object.keys(wordPool).forEach(cat => words.push(...wordPool[cat]));
-        db.update({ state: 'RUNNING', words: words, cards: {} });
+        const allWords = [];
+        Object.keys(wordPool).forEach(cat => allWords.push(...wordPool[cat]));
+        db.update({ state: 'RUNNING', words: allWords, cards: {}, startTime: Date.now() });
     }
 
     function closeResult() {
@@ -163,15 +173,13 @@
     function handleInput(e, id) {
         if(e.key !== 'Enter') return;
         const val = e.target.value.trim();
-        const team = currentTeams[id];
-        if(currentWords.includes(val)) {
-            db.child('cards').child(val).set(team);
-        }
+        if(currentWords.includes(val)) db.child('cards').child(val).set(currentTeams[id]);
         e.target.value = "";
     }
 
+    // --- 3. UI 및 전략 시스템 ---
+
     function updateUI() {
-        // 레벨 계산 및 카드 색상 업데이트
         const counts = { red: [0,0,0,0,0], blue: [0,0,0,0,0] };
         Object.keys(pCards).forEach(w => {
             const t = pCards[w];
@@ -184,47 +192,51 @@
             }
         });
 
-        // 레벨 판정 (10장당 1레벨)
+        // 5개 단위 레벨업 (공터-마을-도시-개도국-선진국)
         ['red','blue'].forEach(t => {
-            counts[t].forEach((cnt, idx) => { cityLevels[t][idx] = Math.min(5, Math.floor(cnt/2)); }); // 테스트를 위해 2장당 1렙 설정
+            counts[t].forEach((cnt, idx) => { cityLevels[t][idx] = Math.min(4, Math.floor(cnt/5)); });
         });
 
         for(let i=1; i<=4; i++) {
             const team = currentTeams[i];
+            const enemy = team === 'red' ? 'blue' : 'red';
             const mon = document.getElementById(`mon-${i}`);
-            mon.className = `monitor team-${team} ${mon.classList.contains('focused')?'focused':''}`;
+            mon.className = `monitor team-${team} ${i===focusedId?'focused':''}`;
+            
             cityNames.forEach((_, idx) => {
-                document.getElementById(`lvl-${i}-${idx}`).innerText = `${cityNames[idx]}: Lv.${cityLevels[team][idx]}`;
+                document.getElementById(`lvl-${i}-${idx}`).innerText = `${cityNames[idx]}:${rankLabels[cityLevels[team][idx]]}`;
             });
 
-            // 사보타주 감시
-            const enemy = team === 'red' ? 'blue' : 'red';
-            let dangerIdx = cityLevels[enemy].findIndex(l => l >= 2);
-            if(dangerIdx !== -1) {
-                document.getElementById(`sab-${i}`).style.display = 'flex';
-                document.getElementById(`sab-text-${i}`).innerText = `[${enemy.toUpperCase()}]의 ${cityNames[dangerIdx]} 영토가 너무 강합니다!`;
+            // [미사일 로직] 확대된 모니터에서 적군이 개도국(Lv.3) 이상일 때만 발사 패널 노출
+            const panel = document.getElementById(`mis-panel-${i}`);
+            let dangerIdx = cityLevels[enemy].findIndex(l => l >= 3);
+            if(i === focusedId && dangerIdx !== -1 && active) {
+                panel.style.display = 'flex';
+                document.getElementById(`mis-text-${i}`).innerText = `경고: 적군 ${cityNames[dangerIdx]} 영토 고도 성장 중!`;
                 sabotageTarget = { team: enemy, cityIdx: dangerIdx };
             } else {
-                document.getElementById(`sab-${i}`).style.display = 'none';
+                panel.style.display = 'none';
             }
         }
     }
 
-    function launchMissile(e, monId) {
+    function launchMissile(e, id) {
         e.stopPropagation();
-        const team = currentTeams[monId];
+        const team = currentTeams[id];
         const myCards = Object.keys(pCards).filter(k => pCards[k] === team);
-        if(myCards.length < 7) return alert("카드가 부족합니다! (7장 필요)");
+        if(myCards.length < 7) return alert("발사 자원 부족 (카드 7장 필요)");
 
+        // 내 카드 소모
         myCards.slice(0, 7).forEach(k => db.child('cards').child(k).remove());
-        // 적 해당 영역 카드 몰수 (로직 간소화: 적 해당 영역 카드 전부 제거)
-        const enemyCards = Object.keys(pCards).filter(k => pCards[k] === sabotageTarget.team && wordPool[cityNames[sabotageTarget.cityIdx]].includes(k));
-        enemyCards.forEach(k => db.child('cards').child(k).remove());
-        
-        alert("미사일 발사! 적의 영토를 초토화했습니다.");
+        // 적 해당 영역 파괴
+        const targetWords = wordPool[cityNames[sabotageTarget.cityIdx]];
+        Object.keys(pCards).forEach(w => {
+            if(pCards[w] === sabotageTarget.team && targetWords.includes(w)) db.child('cards').child(w).remove();
+        });
+        alert("미사일이 명중했습니다! 적의 영토가 초기화되었습니다.");
     }
 
-    function closeSabotage(e, id) { e.stopPropagation(); document.getElementById(`sab-${id}`).style.display = 'none'; }
+    function closeSabotage(e, id) { e.stopPropagation(); document.getElementById(`mis-panel-${id}`).style.display = 'none'; }
 
     function startTimer() {
         let time = 120;
@@ -232,8 +244,6 @@
         timerIntr = setInterval(() => {
             time--;
             document.getElementById('timer-disp').innerText = Math.floor(time/60) + ":" + (time%60).toString().padStart(2,'0');
-            
-            // 10초마다 팀 교체
             if(time % 10 === 0 && time > 0) {
                 const ts = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
                 db.update({ teams: { 1:ts[0], 2:ts[1], 3:ts[2], 4:ts[3] } });
@@ -242,6 +252,7 @@
         }, 1000);
     }
 
+    // --- 4. 결과 영토 지도 시각화 ---
     function showResult() {
         document.getElementById('result-screen').style.display = 'flex';
         const ctx = document.getElementById('radarChart').getContext('2d');
@@ -249,13 +260,22 @@
         radarChart = new Chart(ctx, {
             type: 'radar',
             data: {
-                labels: cityNames,
+                labels: cityNames.map(n => n + " 영토"),
                 datasets: [
-                    { label: 'RED', data: cityLevels.red, backgroundColor: 'rgba(255,0,0,0.5)', borderColor: 'red', fill: true },
-                    { label: 'BLUE', data: cityLevels.blue, backgroundColor: 'rgba(0,0,255,0.5)', borderColor: 'blue', fill: true }
+                    { label: 'RED NATION', data: cityLevels.red, backgroundColor: 'rgba(255, 0, 0, 0.6)', borderColor: '#ff0000', borderWidth: 4, fill: true },
+                    { label: 'BLUE NATION', data: cityLevels.blue, backgroundColor: 'rgba(0, 102, 255, 0.6)', borderColor: '#0066ff', borderWidth: 4, fill: true }
                 ]
             },
-            options: { scales: { r: { min: 0, max: 5, ticks: { display: false } } } }
+            options: {
+                scales: {
+                    r: {
+                        min: 0, max: 4, ticks: { display: false, stepSize: 1 },
+                        grid: { color: '#444' }, angleLines: { color: '#444' },
+                        pointLabels: { color: '#ffea00', font: { family: 'DungGeunMo', size: 20 } }
+                    }
+                },
+                plugins: { legend: { labels: { color: '#fff', font: { family: 'DungGeunMo', size: 16 } } } }
+            }
         });
     }
 </script>
