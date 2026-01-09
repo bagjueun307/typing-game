@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>MAFIA: EMPIRE EVOLUTION</title>
+    <title>MAFIA: EMPIRE EVOLUTION V2</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
@@ -13,56 +13,58 @@
         
         /* 상단 바 */
         #top-bar { position: fixed; top: 0; left: 0; right: 0; height: 110px; background: #15151A; border-bottom: 4px solid var(--yellow); display: flex; justify-content: space-around; align-items: center; z-index: 6000; }
-        .mini-chart-wrap { width: 140px; height: 100px; display: flex; flex-direction: column; align-items: center; }
+        .mini-chart-wrap { width: 140px; height: 100px; }
         #timer-disp { font-size: 2.8rem; color: var(--yellow); text-shadow: 0 0 10px var(--yellow); }
 
-        #room-view { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 20px; padding: 140px 20px 20px 20px; height: 100vh; box-sizing: border-box; }
-        .monitor { border: 5px solid #333; background: #000; display: flex; flex-direction: column; border-radius: 15px; position: relative; transition: 0.5s; overflow: hidden; }
-        .monitor.focused { position: fixed !important; inset: 130px 30px 30px 30px; z-index: 5000; }
+        /* 모니터 뷰 */
+        #room-view { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; padding: 130px 15px 15px 15px; height: 100vh; box-sizing: border-box; }
+        .monitor { border: 5px solid #333; background: #111; display: flex; flex-direction: column; border-radius: 10px; position: relative; transition: all 0.3s; overflow: hidden; }
+        .monitor.focused { position: fixed !important; inset: 120px 20px 20px 20px; z-index: 5000; border-width: 8px; }
         
-        /* 오버레이 */
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        .guard-layer { position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        /* 팀 소속 시각화 */
+        .monitor.team-red { border-color: var(--red); box-shadow: inset 0 0 20px rgba(255, 71, 87, 0.3); }
+        .monitor.team-blue { border-color: var(--blue); box-shadow: inset 0 0 20px rgba(46, 134, 222, 0.3); }
 
         /* 카드 보드 */
-        .board { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; flex: 1; padding: 10px; background: #050505; overflow-y: auto; }
-        .card { height: 45px; perspective: 600px; }
-        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.4s; transform-style: preserve-3d; }
-        .is-flipped .card-inner { transform: rotateY(180deg); }
-        .card-front, .card-back { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; }
-        .card-front { background: #1A1A1A; border: 1px solid #333; }
-        .card-back { transform: rotateY(180deg); color: white; border: 1.5px solid #fff; }
-        .back-red { background: var(--red); }
-        .back-blue { background: var(--blue); }
-        .back-neutral { background: #444; }
+        .board { display: grid; grid-template-columns: repeat(13, 1fr); gap: 4px; flex: 1; padding: 10px; background: #000; overflow-y: auto; }
+        .card { height: 40px; background: #222; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #888; transition: all 0.3s; border: 1px solid #333; }
+        .card.owned-red { background: var(--red) !important; color: white !important; border-color: #fff; font-weight: bold; box-shadow: 0 0 10px var(--red); }
+        .card.owned-blue { background: var(--blue) !important; color: white !important; border-color: #fff; font-weight: bold; box-shadow: 0 0 10px var(--blue); }
+        .card.neutral { background: #555; color: #eee; }
 
-        .security-bar { text-align: center; padding: 8px; background: #222; font-size: 0.9rem; }
-        .security-bar.alert { background: var(--alert); animation: shake 0.1s infinite; }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(3px); } }
+        /* 입력창 영역 (팀 색상 반영) */
+        .input-wrap { display: flex; height: 70px; border-top: 4px solid var(--yellow); background: #000; }
+        .monitor.team-red .input-wrap { background: rgba(255, 71, 87, 0.2); }
+        .monitor.team-blue .input-wrap { background: rgba(46, 134, 222, 0.2); }
+        .input-box { flex: 1; background: transparent; color: #fff; border: none; font-size: 2.2rem; text-align: center; outline: none; font-family: 'DungGeunMo'; }
 
-        .input-wrap { display: flex; height: 60px; border-top: 3px solid var(--yellow); }
-        .input-box { flex: 1; background: #000; color: #fff; border: none; font-size: 1.8rem; text-align: center; outline: none; font-family: 'DungGeunMo'; }
+        /* 보안 알림 */
+        .security-bar { text-align: center; padding: 6px; font-size: 1rem; font-weight: bold; background: #222; }
+        .security-bar.warning { background: var(--yellow); color: #000; }
+        .security-bar.alert { background: var(--alert); color: #fff; animation: flash 0.2s infinite; }
+        @keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-        /* 진화 정보 */
-        .evolution-status { margin-top: 10px; font-size: 0.8rem; color: #aaa; }
-        .upgrade-badge { background: var(--yellow); color: #000; padding: 2px 5px; border-radius: 3px; font-weight: bold; margin-left: 5px; }
-
-        button { padding: 15px 30px; font-family: 'DungGeunMo'; cursor: pointer; background: var(--yellow); border: none; font-size: 1.1rem; margin-top: 10px; }
+        /* 오버레이 */
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        button { padding: 15px 40px; font-family: 'DungGeunMo'; cursor: pointer; background: var(--yellow); border: none; font-size: 1.2rem; margin-top: 20px; }
+        
+        #result-charts { display: flex; gap: 50px; margin-top: 20px; width: 80%; justify-content: center; }
+        .chart-box { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; text-align: center; }
     </style>
 </head>
 <body>
 
 <div id="step-selector" class="overlay">
-    <h1 id="evo-title" style="color:var(--yellow); font-size: 3rem;">국가 기초 설립 단계</h1>
-    <p id="evo-desc" style="color: #aaa; margin-bottom: 20px;">각 영역당 20개 이상의 단어를 점령하여 개도국으로 진화하십시오.</p>
-    <div id="status-container" style="display:flex; gap:10px; margin-bottom:20px;"></div>
-    <button id="start-round-btn" onclick="startReady()">현재 단계 침투 시작</button>
+    <h1 id="evo-title" style="color:var(--yellow); font-size: 3.5rem;">[국가 기초 설립 단계]</h1>
+    <p style="color: #aaa; margin-bottom: 20px;">모든 산업 영역에서 20점 이상을 획득하면 다음 단계로 진화합니다.</p>
+    <div id="status-container" style="display:flex; gap:15px;"></div>
+    <button onclick="startReady()">데이터 침투 시작</button>
 </div>
 
 <div id="top-bar">
     <div class="mini-chart-wrap"><canvas id="live-chart-red"></canvas></div>
     <div style="text-align: center;">
-        <div id="current-step-disp" style="color:var(--yellow); letter-spacing: 2px;">기초 단계</div>
+        <div id="step-name" style="color:var(--yellow); font-size: 1.2rem; margin-bottom: 5px;">기초 단계</div>
         <div id="timer-disp">120.0s</div>
     </div>
     <div class="mini-chart-wrap"><canvas id="live-chart-blue"></canvas></div>
@@ -73,14 +75,11 @@
         for(let i=1; i<=4; i++) {
             document.write(`
                 <div class="monitor" id="mon-${i}" onclick="focusMon(${i})">
-                    <div class="guard-layer" id="guard-${i}" style="display:none;">
-                        <h2>시스템 접근 권한 대기</h2>
-                        <button onclick="requestStart(event, ${i})">침투 개시</button>
-                    </div>
-                    <div id="cd-${i}" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:8rem; color:var(--yellow); z-index:1100; display:none;">3</div>
-                    <div class="security-bar" id="sec-${i}">연결 대기</div>
+                    <div class="security-bar" id="sec-${i}">대기 중...</div>
                     <div class="board" id="board-${i}"></div>
-                    <div class="input-wrap"><input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="모니터 선택" disabled></div>
+                    <div class="input-wrap">
+                        <input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="터치하여 선택" disabled>
+                    </div>
                 </div>
             `);
         }
@@ -88,220 +87,183 @@
 </div>
 
 <div id="result-screen" class="overlay" style="display:none;">
-    <h1 style="font-size: 3rem; color: var(--yellow);">ROUND ANALYSIS</h1>
-    <p id="next-evo-msg" style="color:#fff; margin-bottom:20px;"></p>
-    <div style="display: flex; gap: 40px; margin-bottom: 20px;">
-        <canvas id="final-chart-red" width="300" height="300"></canvas>
-        <canvas id="final-chart-blue" width="350" height="350"></canvas>
+    <h1 style="font-size: 3rem; color: var(--yellow);">분석 보고서</h1>
+    <div id="result-charts">
+        <div class="chart-box"><h2 style="color:var(--red);">RED MAFIA</h2><canvas id="final-chart-red" width="400" height="400"></canvas></div>
+        <div class="chart-box"><h2 style="color:var(--blue);">BLUE MAFIA</h2><canvas id="final-chart-blue" width="400" height="400"></canvas></div>
     </div>
-    <p id="auto-close-timer">20초 후 대기실로 이동합니다...</p>
+    <p id="auto-timer" style="margin-top:20px; font-size:1.5rem; color:var(--yellow);"></p>
 </div>
 
 <script>
-    // 1. 단어 데이터 (영역당 최소 25~30개 배치하여 20개 달성 가능하게 함)
     const industryData = {
-        1: { // 기초
-            '에너지': ['석탄','땔감','석유','등유','전기','발전소','전선','가스','화력','댐','유정','탄광','풍차','장작','난로','양초','성냥','기름','축전지','변압기','횃불','증기','매연','굴뚝','구리'],
+        1: {
+            '에너지': ['석탄','땔감','석유','전기','발전소','전선','가스','화력','댐','유정','탄광','풍차','장작','난로','양초','성냥','기름','축전지','변압기','횃불','증기','매연','굴뚝','구리','발전기'],
             '제조': ['철강','방직','벽돌','시멘트','목재','금속','비료','플라스틱','합판','고무','섬유','베틀','방앗간','대장간','망치','톱','바늘','단추','가죽','종이','공구','나사','못','판자','포대'],
-            '금융': ['현금','금고','시장','거래','화폐','은행','장부','전표','금괴','환전','주화','동전','상점','지갑','수첩','계산기','주판','물물교환','금리','예금','출금','차용증','낙찰','매매','저금통'],
-            '기술': ['라디오','타자기','엔진','모터','기어','벨브','회로','전구','나침반','시계','인쇄기','안경','현미경','망원경','도르래','지렛대','풀리','피스톤','베어링','납땜','렌즈','전신기','축음기','필름','카메라'],
-            '인적자본': ['농부','근로자','교실','보건소','의원','기능공','식량','의용군','심부름','장터','마을','칠판','교과서','연필','지우개','공책','약초','침술','우체부','이장','선생님','학생','의사','간호사','조수']
-        },
-        // 2, 3단계도 이와 같은 규모로 확장되어 있다고 가정 (생략)
+            '금융': ['현금','금고','시장','거래','화폐','은행','장부','전표','금괴','환전','주화','동전','상점','지갑','수첩','계산기','주판','교환','금리','예금','출금','차용증','낙찰','매매','저금통'],
+            '기술': ['라디오','타자기','엔진','모터','기어','벨브','회로','전구','나침반','시계','인쇄기','안경','현미경','망원경','도르래','지렛대','풀리','피스톤','베어링','납땜','렌즈','전신','축음기','필름','카메라'],
+            '인적자본': ['농부','근로자','교실','보건소','의원','기능공','식량','의용군','심부름','장터','마을','칠판','교과서','연필','지우개','공책','약초','침술','우체부','이장','교사','학생','의사','간호사','조수']
+        }
     };
 
-    let currentStep = 1;
+    let currentStep = 1, active = false, isAlert = false, isWarning = false;
     let evolutionProgress = { '에너지': false, '제조': false, '금융': false, '기술': false, '인적자본': false };
-    let active = false, isAlert = false, monTeams = {};
     let liveCharts = {}, finalCharts = {};
-    let timerInterval;
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('mafia_v4_final');
 
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('mafia_empire_v3');
-
-    // 단계별 UI 초기화
     function startReady() {
         document.getElementById('step-selector').style.display = 'none';
         const ts = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
-        db.set({ state: 'READY', cards: {}, teams: {1:ts[0], 2:ts[1], 3:ts[2], 4:ts[3]}, bonus: "" });
-        initBoard(currentStep);
+        db.set({ state: 'START', cards: {}, teams: {1:ts[0], 2:ts[1], 3:ts[2], 4:ts[3]} });
+        initBoard();
         initLiveCharts();
-        for(let i=1; i<=4; i++) document.getElementById(`guard-${i}`).style.display = 'flex';
     }
 
-    function initBoard(step) {
-        const stepWords = industryData[step] || industryData[1];
+    function initBoard() {
+        const words = industryData[1];
         for(let i=1; i<=4; i++) {
             const b = document.getElementById(`board-${i}`);
             b.innerHTML = "";
-            Object.keys(stepWords).forEach(cat => {
-                stepWords[cat].forEach(word => {
-                    const c = document.createElement('div');
-                    c.className = 'card'; c.id = `c-${i}-${word}`;
-                    c.innerHTML = `<div class="card-inner"><div class="card-front">${word}</div><div class="card-back" id="bk-${i}-${word}">${word}</div></div>`;
-                    b.appendChild(c);
-                });
+            Object.values(words).flat().forEach(w => {
+                const div = document.createElement('div');
+                div.className = 'card'; div.id = `card-${i}-${w}`; div.innerText = w;
+                b.appendChild(div);
             });
         }
     }
 
-    function requestStart(e, id) {
-        e.stopPropagation();
-        document.getElementById(`guard-${id}`).style.display = 'none';
-        const cd = document.getElementById(`cd-${id}`);
-        cd.style.display = 'block';
-        let c = 3;
-        const intr = setInterval(() => {
-            c--; if(c > 0) cd.innerText = c;
-            else {
-                clearInterval(intr); cd.style.display = 'none';
-                db.update({ state: 'START' });
-                document.getElementById(`in-${id}`).disabled = false;
-                document.getElementById(`in-${id}`).focus();
-            }
-        }, 1000);
+    function focusMon(id) {
+        document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
+        const target = document.getElementById(`mon-${id}`);
+        target.classList.add('focused');
+        const input = document.getElementById(`in-${id}`);
+        input.disabled = false;
+        input.focus();
     }
 
     db.on('value', snap => {
         const d = snap.val(); if(!d) return;
         if(d.state === 'START' && !active) { active = true; startTimer(); }
         if(d.teams) {
-            monTeams = d.teams;
-            for(let i=1; i<=4; i++) document.getElementById(`mon-${i}`).style.borderColor = (d.teams[i] === 'red' ? 'var(--red)' : 'var(--blue)');
+            for(let i=1; i<=4; i++) {
+                const m = document.getElementById(`mon-${i}`);
+                m.className = `monitor team-${d.teams[i]} ${m.classList.contains('focused')?'focused':''}`;
+                document.getElementById(`sec-${i}`).innerText = `접속 팀: ${d.teams[i].toUpperCase()}`;
+            }
         }
         if(d.cards) {
             const scores = { red: { '에너지':0,'제조':0,'금융':0,'기술':0,'인적자본':0 }, blue: { '에너지':0,'제조':0,'금융':0,'기술':0,'인적자본':0 } };
             Object.keys(d.cards).forEach(w => {
                 const team = d.cards[w].team;
-                const cat = findCategory(w);
+                const cat = findCat(w);
                 if(cat && team !== 'neutral') scores[team][cat]++;
                 for(let i=1; i<=4; i++) {
-                    const c = document.getElementById(`c-${i}-${w}`);
-                    if(c) c.classList.toggle('is-flipped', team !== 'neutral');
+                    const c = document.getElementById(`card-${i}-${w}`);
+                    if(c) c.className = `card owned-${team}`;
                 }
             });
-            updateCharts(scores);
-            checkEvolution(scores);
+            updateLive(scores);
+            updateEvoProgress(scores);
         }
     });
 
-    function findCategory(word) {
-        const stepWords = industryData[currentStep] || industryData[1];
-        for(let cat in stepWords) if(stepWords[cat].includes(word)) return cat;
+    function findCat(w) {
+        for(let cat in industryData[1]) if(industryData[1][cat].includes(w)) return cat;
         return null;
     }
 
     function handleInput(e, id) {
-        const team = monTeams[id];
-        if(isAlert) { neutralize(team); e.target.value = ""; return; }
+        const team = document.getElementById(`mon-${id}`).classList.contains('team-red') ? 'red' : 'blue';
+        if(isAlert) {
+            db.child('cards').once('value', s => {
+                const c = s.val(); if(!c) return;
+                const mine = Object.keys(c).filter(k => c[k].team === team);
+                if(mine.length > 0) db.child('cards').child(mine[mine.length-1]).set({team:'neutral'});
+            });
+            e.target.value = ""; return;
+        }
         if(e.key === 'Enter') {
             const val = e.target.value.trim();
-            if(findCategory(val)) db.child('cards').child(val).set({ team: team });
+            if(findCat(val)) db.child('cards').child(val).set({ team: team });
             e.target.value = "";
         }
     }
 
-    function neutralize(team) {
-        db.child('cards').once('value', s => {
-            const c = s.val(); if(!c) return;
-            const mine = Object.keys(c).filter(k => c[k].team === team);
-            if(mine.length > 0) db.child('cards').child(mine[mine.length-1]).set({ team: 'neutral' });
-        });
-    }
-
     function startTimer() {
         let time = 1200;
-        timerInterval = setInterval(() => {
+        const intr = setInterval(() => {
             time--;
             document.getElementById('timer-disp').innerText = (time/10).toFixed(1) + "s";
             
-            // 10초마다 팀 셔플
+            let cycle = time % 100;
+            isWarning = (cycle <= 30 && cycle > 20); // 1초 예고 (2.1초~3초 사이)
+            isAlert = (cycle <= 20 && cycle > 0);   // 2초 감시 (0.1초~2초 사이)
+
             if(time > 0 && time % 100 === 0) {
                 const ts = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
                 db.update({ teams: {1:ts[0], 2:ts[1], 3:ts[2], 4:ts[3]} });
             }
 
-            let cycle = time % 100;
-            isAlert = (cycle < 20 && cycle > 0); 
-
             for(let i=1; i<=4; i++) {
                 const s = document.getElementById(`sec-${i}`);
-                if(isAlert) { s.innerText = "🚨 보안 레이저! 타자 금지! 🚨"; s.classList.add('alert'); }
-                else { s.innerText = "📡 경로 안정: " + monTeams[i].toUpperCase(); s.classList.remove('alert'); }
+                if(isAlert) { s.innerText = "🚨 레이저 가동! 입력 즉시 패널티! 🚨"; s.className = "security-bar alert"; }
+                else if(isWarning) { s.innerText = "⚠️ 경고: 보안 스캔 1초 전!"; s.className = "security-bar warning"; }
+                else { s.innerText = "📡 시스템 안정: " + (document.getElementById(`mon-${i}`).classList.contains('team-red')?'RED':'BLUE'); s.className = "security-bar"; }
             }
 
-            if(time <= 0) { clearInterval(timerInterval); endRound(); }
+            if(time <= 0) { clearInterval(intr); endRound(); }
         }, 100);
-    }
-
-    function checkEvolution(scores) {
-        // 어느 한 팀이라도 영역별 20개를 달성하면 해당 영역 업그레이드 가능 처리
-        const categories = ['에너지','제조','금융','기술','인적자본'];
-        categories.forEach(cat => {
-            if(scores.red[cat] >= 20 || scores.blue[cat] >= 20) evolutionProgress[cat] = true;
-        });
     }
 
     function endRound() {
         active = false;
         document.getElementById('result-screen').style.display = 'flex';
         renderFinalCharts();
-
-        let timeLeft = 20;
-        const autoIntr = setInterval(() => {
-            timeLeft--;
-            document.getElementById('auto-close-timer').innerText = `${timeLeft}초 후 대기실로 이동합니다...`;
-            if(timeLeft <= 0) {
-                clearInterval(autoIntr);
-                goToLobby();
-            }
+        let left = 20;
+        const timer = setInterval(() => {
+            left--;
+            document.getElementById('auto-timer').innerText = `${left}초 후 대기실로 이동합니다...`;
+            if(left <= 0) { clearInterval(timer); location.reload(); }
         }, 1000);
     }
 
-    function goToLobby() {
-        document.getElementById('result-screen').style.display = 'none';
-        document.getElementById('step-selector').style.display = 'flex';
-        
-        // 5개 영역이 모두 달성되었는지 확인
-        const allClear = Object.values(evolutionProgress).every(v => v === true);
-        if(allClear) {
-            currentStep++;
-            evolutionProgress = { '에너지': false, '제조': false, '금융': false, '기술': false, '인적자본': false };
-            alert("축하합니다! 국가 단계가 진화했습니다!");
-        }
-
-        const titles = ["", "국가 기초 설립 단계", "개발 도상국 단계", "선진국 도약 단계"];
-        document.getElementById('evo-title').innerText = titles[currentStep];
-        
-        // 상태 표시 업데이트
-        let html = "";
-        Object.keys(evolutionProgress).forEach(cat => {
-            html += `<div style="padding:10px; border:1px solid #555;">${cat}: ${evolutionProgress[cat] ? '<span class="upgrade-badge">UPGRADE!</span>' : '진행중'}</div>`;
-        });
-        document.getElementById('status-container').innerHTML = html;
-    }
-
-    // 차트 로직 (이전과 동일하되 20점 기준 가이드 추가)
+    // 차트 관련
     function initLiveCharts() {
-        const labels = ['에너지','제조','금융','기술','인적자본'];
-        const cfg = (color) => ({
+        const opt = (color) => ({
             type: 'radar',
-            data: { labels, datasets: [{ data: [0,0,0,0,0], borderColor: color, backgroundColor: color+'33' }] },
-            options: { scales: { r: { min:0, max:25, ticks:{display:false} } }, plugins:{legend:{display:false}} }
+            data: { labels: ['에너지','제조','금융','기술','인적자본'], datasets: [{ data:[0,0,0,0,0], borderColor:color, backgroundColor:color+'44' }] },
+            options: { scales: { r: { min:0, max:25, ticks:{display:false}, grid:{color:'#444'}, angleLines:{color:'#444'} } }, plugins:{legend:{display:false}} }
         });
-        if(liveCharts.red) { liveCharts.red.destroy(); liveCharts.blue.destroy(); }
-        liveCharts.red = new Chart(document.getElementById('live-chart-red'), cfg('#FF4757'));
-        liveCharts.blue = new Chart(document.getElementById('live-chart-blue'), cfg('#2E86DE'));
+        liveCharts.red = new Chart(document.getElementById('live-chart-red'), opt('#FF4757'));
+        liveCharts.blue = new Chart(document.getElementById('live-chart-blue'), opt('#2E86DE'));
     }
 
-    function updateCharts(scores) {
+    function updateLive(scores) {
         liveCharts.red.data.datasets[0].data = Object.values(scores.red);
         liveCharts.blue.data.datasets[0].data = Object.values(scores.blue);
         liveCharts.red.update(); liveCharts.blue.update();
     }
 
-    function focusMon(id) {
-        document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
-        document.getElementById(`mon-${id}`).classList.add('focused');
+    function renderFinalCharts() {
+        const rData = liveCharts.red.data.datasets[0].data;
+        const bData = liveCharts.blue.data.datasets[0].data;
+        const opt = (color, data) => ({
+            type: 'radar',
+            data: { labels: ['에너지','제조','금융','기술','인적자본'], datasets: [{ data:data, borderColor:color, backgroundColor:color+'66', borderWidth:5 }] },
+            options: { scales: { r: { min:0, max:25, ticks:{color:'#fff', backdropColor:'transparent', z:10}, grid:{color:'#555', lineWidth:2}, angleLines:{color:'#555'} } }, plugins:{legend:{display:false}} }
+        });
+        new Chart(document.getElementById('final-chart-red'), opt('#FF4757', rData));
+        new Chart(document.getElementById('final-chart-blue'), opt('#2E86DE', bData));
+    }
+
+    function updateEvoProgress(scores) {
+        const cats = ['에너지','제조','금융','기술','인적자본'];
+        let html = "";
+        cats.forEach(c => {
+            const clear = (scores.red[c] >= 20 || scores.blue[c] >= 20);
+            html += `<div style="padding:10px; border:2px solid ${clear?'var(--yellow)':'#444'}">${c}: ${clear?'✅완료':'점령중'}</div>`;
+        });
+        document.getElementById('status-container').innerHTML = html;
     }
 </script>
 </body>
