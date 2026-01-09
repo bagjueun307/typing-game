@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>NATION BUILDER: REAL-TIME ANALYTICS</title>
+    <title>NATION BUILDER: READY STEP</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
@@ -11,72 +11,68 @@
         :root { --red: #ff4757; --blue: #2e86de; --yellow: #f1c40f; --dark: #0a0a0f; --neon: #00ffdd; }
         body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', sans-serif; margin: 0; overflow: hidden; }
         
+        /* 상단 바 */
         #top-bar { position: fixed; top: 0; left: 0; right: 0; height: 110px; background: #15151a; border-bottom: 4px solid var(--yellow); display: flex; justify-content: space-around; align-items: center; z-index: 6000; }
         #timer-disp { font-size: 3.5rem; color: var(--yellow); text-shadow: 0 0 10px var(--yellow); }
+        #guide-msg { color: var(--neon); font-size: 1.2rem; animation: pulse 1s infinite; }
 
+        /* 모니터 레이아웃 */
         #room-view { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; padding: 130px 15px 15px 15px; height: 100vh; box-sizing: border-box; }
-        .monitor { border: 6px solid #333; background: #000; display: flex; flex-direction: column; border-radius: 12px; position: relative; overflow: hidden; }
+        .monitor { border: 6px solid #333; background: #000; display: flex; flex-direction: column; border-radius: 12px; position: relative; cursor: pointer; transition: transform 0.3s; }
+        .monitor:hover { border-color: var(--yellow); transform: scale(1.02); }
         
-        /* 팀 배너 & 실시간 점수 */
+        /* 전체 화면 확대 시 */
+        .monitor.focused { position: fixed !important; inset: 120px 20px 20px 20px; z-index: 5000; border-width: 10px; border-color: var(--neon); cursor: default; transform: none; }
+
         .team-banner { padding: 8px; text-align: center; font-size: 1rem; font-weight: bold; }
         .monitor.team-red .team-banner { background: var(--red); }
         .monitor.team-blue .team-banner { background: var(--blue); }
 
-        /* 업그레이드 버튼 & 실시간 카운트 */
-        .upgrade-layer { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; background: #111; padding: 8px; }
+        /* 업그레이드 영역 */
+        .upgrade-layer { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; background: #111; padding: 8px; border-bottom: 2px solid #333; }
         .up-wrap { display: flex; flex-direction: column; align-items: center; }
         .count-badge { font-size: 0.65rem; color: var(--neon); margin-bottom: 2px; }
-        .up-btn { font-family: 'DungGeunMo'; width: 100%; padding: 5px; font-size: 0.65rem; cursor: pointer; border: 1px solid #444; background: #222; color: #888; border-radius: 4px; }
+        .up-btn { font-family: 'DungGeunMo'; width: 100%; padding: 6px; font-size: 0.65rem; cursor: pointer; border: 1px solid #444; background: #222; color: #888; border-radius: 4px; }
         .up-btn.ready { background: var(--yellow); color: #000; font-weight: bold; animation: blink 0.5s infinite; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 
-        .board { display: grid; grid-template-columns: repeat(14, 1fr); gap: 2px; flex: 1; padding: 10px; background: #000; }
-        .card { height: 35px; background: #151515; border: 1px solid #222; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #333; }
+        .board { display: grid; grid-template-columns: repeat(14, 1fr); gap: 3px; flex: 1; padding: 15px; background: #000; align-content: start; }
+        .card { height: 40px; background: #151515; border: 1px solid #222; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #444; }
         .card.owned-red { background: var(--red) !important; color: #fff !important; }
         .card.owned-blue { background: var(--blue) !important; color: #fff !important; }
 
-        .input-wrap { display: flex; height: 80px; border-top: 4px solid var(--yellow); }
-        .input-box { flex: 1; background: #000; color: #0f0; border: none; font-size: 3rem; text-align: center; outline: none; font-family: 'DungGeunMo'; }
+        /* 입력창 구역 */
+        .input-wrap { display: flex; height: 100px; border-top: 5px solid var(--yellow); background: #000; }
+        .input-box { flex: 1; background: #000; color: #0f0; border: none; font-size: 4rem; text-align: center; outline: none; font-family: 'DungGeunMo'; }
 
-        /* 결과창 스타일 */
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .chart-box { background: #15151a; padding: 20px; border-radius: 20px; border: 3px solid #444; width: 450px; text-align: center; }
-        .oracle-msg { background: rgba(0,255,221,0.1); border-left: 5px solid var(--neon); padding: 15px; margin-top: 15px; font-size: 0.9rem; text-align: left; line-height: 1.4; }
+        /* 시작 레이어 */
+        .start-gate { position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 5500; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .gate-btn { padding: 20px 60px; font-family: 'DungGeunMo'; font-size: 2rem; background: var(--yellow); border: none; cursor: pointer; border-radius: 10px; }
+
+        /* 런처(로비) */
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     </style>
 </head>
 <body>
 
 <div id="lobby-screen" class="overlay">
-    <h1 style="color:var(--yellow); font-size: 4rem;">NATION BUILDER</h1>
-    <button class="main-btn" onclick="prepareRound()" style="padding:20px 50px; font-family:'DungGeunMo'; font-size:2rem; background:var(--yellow); border:none; cursor:pointer;">게임 시작</button>
+    <h1 style="color:var(--yellow); font-size: 4rem; margin-bottom: 20px;">NATION BUILDER</h1>
+    <button class="gate-btn" onclick="prepareRound()">자원 구역 생성</button>
 </div>
 
-<div id="result-screen" class="overlay" style="display:none; z-index:11000;">
-    <h1 style="color:var(--yellow); margin-bottom: 20px;">[ 최종 국가 발전 분석 결과 ]</h1>
-    <div style="display:flex; gap:30px;">
-        <div class="chart-box" style="border-color: var(--red);">
-            <h2 style="color:var(--red);">RED TEAM</h2>
-            <canvas id="chart-red" width="400" height="300"></canvas>
-            <div id="tip-red" class="oracle-msg"></div>
-        </div>
-        <div class="chart-box" style="border-color: var(--blue);">
-            <h2 style="color:var(--blue);">BLUE TEAM</h2>
-            <canvas id="chart-blue" width="400" height="300"></canvas>
-            <div id="tip-blue" class="oracle-msg"></div>
-        </div>
-    </div>
-    <button onclick="location.reload()" style="margin-top:30px; padding:15px 40px; font-family:'DungGeunMo'; background:var(--neon); border:none; cursor:pointer;">메인으로 돌아가기</button>
+<div id="top-bar">
+    <div id="guide-msg">접속할 모니터를 선택하십시오</div>
+    <div id="timer-disp">STANDBY</div>
 </div>
-
-<div id="top-bar"><div id="timer-disp">STANDBY</div></div>
 
 <div id="room-view">
     <script>
         const cityList = ['발전의 도시','강철의 도시','자본의 도시','미래의 도시','지혜의 도시'];
         for(let i=1; i<=4; i++) {
             document.write(`
-                <div class="monitor" id="mon-${i}" onclick="focusMon(${i})">
-                    <div class="team-banner" id="banner-${i}">TEAM LOADING...</div>
+                <div class="monitor" id="mon-${i}" onclick="zoomIn(${i})">
+                    <div class="team-banner" id="banner-${i}">대기 중...</div>
                     <div class="upgrade-layer">
                         ${cityList.map((c, idx) => `
                             <div class="up-wrap">
@@ -85,8 +81,9 @@
                             </div>
                         `).join('')}
                     </div>
-                    <div class="monitor-start-layer" id="layer-${i}" style="position:absolute; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:3000;">
-                        <button onclick="triggerStart(event, ${i})" style="padding:15px 30px; font-family:'DungGeunMo'; background:var(--yellow); border:none; cursor:pointer;">접속</button>
+                    <div class="start-gate" id="gate-${i}" style="display:none;">
+                        <h2 style="color:white; margin-bottom:20px;">접속 승인 대기</h2>
+                        <button class="gate-btn" onclick="triggerActualStart(event, ${i})">건설 개시</button>
                     </div>
                     <div class="board" id="board-${i}"></div>
                     <div class="input-wrap"><input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="터미널 잠김" disabled autocomplete="off"></div>
@@ -112,7 +109,7 @@
 
     cityList.forEach(c => { cityLevels.red[c] = 0; cityLevels.blue[c] = 0; });
 
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v9_5');
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v9_6');
 
     function prepareRound() {
         document.getElementById('lobby-screen').style.display = 'none';
@@ -135,19 +132,31 @@
         }
     }
 
-    function focusMon(id) {
+    // 1단계: 모니터 선택 및 확대
+    function zoomIn(id) {
+        if(document.getElementById(`mon-${id}`).classList.contains('focused')) return;
+        
         document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
-        document.getElementById(`mon-${id}`).classList.add('focused');
+        document.querySelectorAll('.start-gate').forEach(g => g.style.display = 'none');
+        
+        const target = document.getElementById(`mon-${id}`);
+        target.classList.add('focused');
+        document.getElementById(`gate-${id}`).style.display = 'flex';
+        document.getElementById('guide-msg').innerText = "권한 승인이 필요합니다";
     }
 
-    function triggerStart(e, id) {
+    // 2단계: 확대된 화면에서 시작 버튼 클릭
+    function triggerActualStart(e, id) {
         e.stopPropagation();
-        document.getElementById(`layer-${id}`).style.display = 'none';
+        document.getElementById(`gate-${id}`).style.display = 'none';
         document.getElementById(`in-${id}`).disabled = false;
         document.getElementById(`in-${id}`).focus();
+        document.getElementById('guide-msg').innerText = "자원 수집 및 도시 업그레이드 중...";
+        
         if(!active) db.update({ state: 'START' });
     }
 
+    // (이후 Firebase 동기화 및 업그레이드 로직은 동일하게 유지)
     db.on('value', snap => {
         const d = snap.val(); if(!d) return;
         if(d.state === 'START' && !active) { active = true; startTimer(); }
@@ -156,30 +165,26 @@
             for(let i=1; i<=4; i++) {
                 const m = document.getElementById(`mon-${i}`);
                 m.className = `monitor team-${d.teams[i]} ${m.classList.contains('focused')?'focused':''}`;
-                document.getElementById(`banner-${i}`).innerText = `${d.teams[i].toUpperCase()} TEAM`;
+                document.getElementById(`banner-${i}`).innerText = `${d.teams[i].toUpperCase()} TEAM DISTRICT`;
             }
         }
         if(d.cards) {
             persistentCards = d.cards;
-            updateRealTimeStats();
+            updateUIStats();
         }
     });
 
-    function updateRealTimeStats() {
+    function updateUIStats() {
         const scores = { red: {}, blue: {} };
         cityList.forEach(c => { scores.red[c] = 0; scores.blue[c] = 0; });
-        
         Object.keys(persistentCards).forEach(w => {
             const t = persistentCards[w].team;
-            const cat = findCat(w);
-            if(cat) scores[t][cat]++;
-            // 카드 색상 실시간 반영
+            const cat = findCat(w); if(cat) scores[t][cat]++;
             for(let i=1; i<=4; i++) {
                 const cEl = document.getElementById(`card-${i}-${w}`);
                 if(cEl) { cEl.classList.remove('owned-red', 'owned-blue'); cEl.classList.add(`owned-${t}`); }
             }
         });
-
         for(let i=1; i<=4; i++) {
             const team = currentTeams[i];
             cityList.forEach((c, idx) => {
@@ -187,7 +192,6 @@
                 const lvl = cityLevels[team][c];
                 const target = (lvl + 1) * 10;
                 document.getElementById(`cnt-${i}-${idx}`).innerText = `${score}/${target}`;
-                
                 const btn = document.getElementById(`up-${i}-${idx}`);
                 btn.classList.toggle('ready', score >= target && lvl < 5);
                 btn.innerText = stepNames[lvl];
@@ -210,7 +214,7 @@
         const team = currentTeams[monId];
         if(document.getElementById(`up-${monId}-${btnIdx}`).classList.contains('ready')) {
             cityLevels[team][cityName]++;
-            updateRealTimeStats();
+            updateUIStats();
         }
     }
 
@@ -223,41 +227,8 @@
                 const ts = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
                 db.update({ teams: { 1:ts[0], 2:ts[1], 3:ts[2], 4:ts[3] } });
             }
-            if(time <= 0) { clearInterval(intr); showFinalResult(); }
+            if(time <= 0) { clearInterval(intr); alert("최종 발전 보고서가 생성되었습니다!"); }
         }, 100);
-    }
-
-    function showFinalResult() {
-        document.getElementById('result-screen').style.display = 'flex';
-        
-        ['red', 'blue'].forEach(team => {
-            const data = cityList.map(c => cityLevels[team][c]);
-            const avgLvl = data.reduce((a,b)=>a+b,0) / 5;
-            let advice = "";
-            if(avgLvl < 2) advice = "기초 자원이 부족합니다. 특정 분야에 집중 투자가 필요합니다.";
-            else if(avgLvl < 4) advice = "국가 기틀이 잡혔습니다! '미래의 도시'와 '지혜의 도시' 레벨을 높여 선진국으로 진입하세요.";
-            else advice = "경축! 모든 분야가 균형 있게 발전한 세계 최강의 선진국이 되었습니다.";
-
-            document.getElementById(`tip-${team}`).innerHTML = `<strong>💡 오라클 전략 조언:</strong><br>${advice}`;
-            
-            new Chart(document.getElementById(`chart-${team}`), {
-                type: 'radar',
-                data: {
-                    labels: cityList.map(c => `${c} (Lv.${cityLevels[team][c]})`),
-                    datasets: [{
-                        data: data,
-                        backgroundColor: team==='red'?'#ff475744':'#2e86de44',
-                        borderColor: team==='red'?'#ff4757':'#2e86de',
-                        borderWidth: 4,
-                        pointBackgroundColor: '#fff'
-                    }]
-                },
-                options: {
-                    scales: { r: { min: 0, max: 5, ticks: { display: false, stepSize: 1 }, pointLabels: { color: '#fff', font: { size: 12, family: 'DungGeunMo' } } } },
-                    plugins: { legend: { display: false } }
-                }
-            });
-        });
     }
 </script>
 </body>
