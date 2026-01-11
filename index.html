@@ -2,142 +2,147 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>타자 판 뒤집기 게임</title>
+    <title>2인용 타자 판 뒤집기 대결</title>
     <style>
-        body { background: #333; color: white; display: flex; flex-direction: column; align-items: center; font-family: 'Malgun Gothic', sans-serif; }
-        #game-container { margin-top: 20px; text-align: center; }
+        body { background: #222; color: white; display: flex; flex-direction: column; align-items: center; font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 20px; }
         
-        /* 4x4 판 구조 */
+        .game-layout { display: flex; gap: 50px; align-items: flex-start; margin-top: 20px; }
+        
+        /* 점수 및 입력 영역 */
+        .player-zone { display: flex; flex-direction: column; align-items: center; width: 200px; padding: 20px; border-radius: 15px; }
+        .p1-zone { background: rgba(52, 152, 219, 0.2); border: 2px solid #3498db; }
+        .p2-zone { background: rgba(231, 76, 60, 0.2); border: 2px solid #e74c3c; }
+
+        .score { font-size: 3rem; font-weight: bold; margin: 10px 0; }
+        .player-label { font-size: 1.2rem; font-weight: bold; }
+        input { width: 100%; padding: 10px; font-size: 1.1rem; border-radius: 5px; border: none; outline: none; margin-top: 10px; text-align: center; }
+        
+        /* 4x4 판 */
         .board { 
             display: grid; 
-            grid-template-columns: repeat(4, 120px); 
-            grid-template-rows: repeat(4, 80px); 
-            gap: 10px; 
+            grid-template-columns: repeat(4, 130px); 
+            grid-template-rows: repeat(4, 90px); 
+            gap: 12px; 
             background: #444; 
-            padding: 15px; 
+            padding: 20px; 
             border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         .cell {
-            background: #eee;
+            background: #fdfdfd;
             color: #333;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 5px;
+            border-radius: 8px;
             font-weight: bold;
-            font-size: 1.1rem;
-            transition: all 0.3s;
-            border: 4px solid transparent;
+            font-size: 1.2rem;
+            transition: all 0.2s ease;
+            position: relative;
+            border-bottom: 5px solid #ccc;
         }
 
-        /* 내 판 (파란색) */
-        .cell.player { background: #3498db; color: white; border-color: #2980b9; }
-        /* 상대 판 (빨간색 - 컴퓨터) */
-        .cell.enemy { background: #e74c3c; color: white; border-color: #c0392b; }
+        /* 1P 점령 (파란색) */
+        .cell.p1-owned { background: #3498db; color: white; border-bottom: 5px solid #2980b9; transform: scale(1.05); }
+        /* 2P 점령 (빨간색) */
+        .cell.p2-owned { background: #e74c3c; color: white; border-bottom: 5px solid #c0392b; transform: scale(1.05); }
 
-        .info { margin: 20px; font-size: 1.5rem; display: flex; gap: 40px; }
-        #input-field { 
-            padding: 10px; width: 300px; font-size: 1.2rem; 
-            border-radius: 5px; border: none; outline: none;
-        }
-        .score-box { padding: 10px 20px; border-radius: 10px; background: #222; }
+        .msg { margin-top: 20px; color: #aaa; }
     </style>
 </head>
 <body>
 
-    <h2>타자 판 뒤집기</h2>
+    <h1>⚔️ 타자 판 뒤집기 대결 ⚔️</h1>
     
-    <div class="info">
-        <div class="score-box">나: <span id="p-score">0</span></div>
-        <div class="score-box">컴퓨터: <span id="e-score">0</span></div>
+    <div class="game-layout">
+        <div class="player-zone p1-zone">
+            <div class="player-label">PLAYER 1 (Blue)</div>
+            <div class="score" id="p1-score">0</div>
+            <input type="text" id="p1-input" placeholder="단어 입력!" autofocus>
+        </div>
+
+        <div class="board" id="board"></div>
+
+        <div class="player-zone p2-zone">
+            <div class="player-label">PLAYER 2 (Red)</div>
+            <div class="score" id="p2-score">0</div>
+            <input type="text" id="p2-input" placeholder="단어 입력!">
+        </div>
     </div>
 
-    <div id="game-container">
-        <div class="board" id="board"></div>
-        <br>
-        <input type="text" id="input-field" placeholder="단어를 입력하고 엔터!" autofocus>
-    </div>
+    <p class="msg">상대방이 점령한 단어를 뺏어올 수 있습니다!</p>
+    <button onclick="initGame()" style="padding: 8px 20px; cursor: pointer;">게임 리셋</button>
 
     <script>
-        // 게임에 사용할 단어 리스트
-        const words = ["사과", "포도", "바나나", "컴퓨터", "자바스크립트", "고양이", "강아지", "대한민국", "우주", "바다", "하늘", "자동차", "호랑이", "코끼리", "비행기", "사자", "토끼", "기차", "수박", "딸기"];
+        const words = ["사과", "바나나", "포도", "딸기", "수박", "오렌지", "망고", "키위", "노트북", "마우스", "키보드", "모니터", "책상", "의자", "거울", "시계", "안경", "지갑", "우산", "신발"];
         
         let boardData = [];
         const boardEl = document.getElementById('board');
-        const inputEl = document.getElementById('input-field');
-        const pScoreEl = document.getElementById('p-score');
-        const eScoreEl = document.getElementById('e-score');
+        const p1Input = document.getElementById('p1-input');
+        const p2Input = document.getElementById('p2-input');
+        const p1ScoreEl = document.getElementById('p1-score');
+        const p2ScoreEl = document.getElementById('p2-score');
 
-        // 게임 초기화
         function initGame() {
             boardData = [];
             boardEl.innerHTML = '';
-            
-            // 16개의 랜덤 단어로 판 채우기
             let shuffleWords = [...words].sort(() => Math.random() - 0.5);
+            
             for (let i = 0; i < 16; i++) {
                 boardData.push({
-                    word: shuffleWords[i % shuffleWords.length],
-                    owner: 'none' // 'none', 'player', 'enemy'
+                    word: shuffleWords[i],
+                    owner: null // null, 'p1', 'p2'
                 });
             }
             renderBoard();
         }
 
-        // 판 그리기
         function renderBoard() {
             boardEl.innerHTML = '';
-            let pScore = 0;
-            let eScore = 0;
+            let s1 = 0, s2 = 0;
 
-            boardData.forEach((data, index) => {
+            boardData.forEach((data) => {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
-                if (data.owner === 'player') { cell.classList.add('player'); pScore++; }
-                if (data.owner === 'enemy') { cell.classList.add('enemy'); eScore++; }
+                if (data.owner === 'p1') { cell.classList.add('p1-owned'); s1++; }
+                else if (data.owner === 'p2') { cell.classList.add('p2-owned'); s2++; }
                 cell.innerText = data.word;
                 boardEl.appendChild(cell);
             });
 
-            pScoreEl.innerText = pScore;
-            eScoreEl.innerText = eScore;
+            p1ScoreEl.innerText = s1;
+            p2ScoreEl.innerText = s2;
 
-            if (pScore + eScore === 16) {
-                const winner = pScore > eScore ? "승리!" : "패배...";
-                alert(`게임 종료! 결과: ${pScore} 대 ${eScore}로 당신의 ${winner}`);
-                initGame();
+            // 모든 칸이 채워졌는지 확인
+            if (s1 + s2 === 16) {
+                setTimeout(() => {
+                    const winner = s1 > s2 ? "1P (파란색)" : (s2 > s1 ? "2P (빨간색)" : "무승부");
+                    alert(`게임 종료!\n${winner} 승리!`);
+                    initGame();
+                }, 100);
             }
         }
 
-        // 유저 입력 확인
-        inputEl.addEventListener('keypress', (e) => {
+        // 입력 처리 로직 (공통)
+        function handleInput(e, player) {
             if (e.key === 'Enter') {
-                const val = inputEl.value.trim();
-                const target = boardData.find(d => d.word === val && d.owner !== 'player');
+                const val = e.target.value.trim();
+                // 해당 단어를 찾되, 이미 내 소유인 것은 제외
+                const target = boardData.find(d => d.word === val && d.owner !== player);
                 
                 if (target) {
-                    target.owner = 'player';
+                    target.owner = player;
                     renderBoard();
                 }
-                inputEl.value = '';
+                e.target.value = '';
             }
-        });
-
-        // 컴퓨터 로직 (일정 시간마다 단어 선점)
-        function enemyTurn() {
-            const targets = boardData.filter(d => d.owner !== 'enemy');
-            if (targets.length > 0) {
-                const randomTarget = targets[Math.floor(Math.random() * targets.length)];
-                randomTarget.owner = 'enemy';
-                renderBoard();
-            }
-            // 난이도 조절: 컴퓨터가 단어를 치는 속도 (3초마다 하나씩)
-            setTimeout(enemyTurn, 3000);
         }
 
+        p1Input.addEventListener('keypress', (e) => handleInput(e, 'p1'));
+        p2Input.addEventListener('keypress', (e) => handleInput(e, 'p2'));
+
         initGame();
-        setTimeout(enemyTurn, 2000); // 2초 후 컴퓨터 시작
     </script>
 </body>
 </html>
