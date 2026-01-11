@@ -2,271 +2,166 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>MAFIA: NATION BUILDER v32.0 FINAL STABLE</title>
-    <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>심플 카드 뒤집기 게임</title>
     <style>
-        :root { --red: #ff0000; --blue: #0044ff; --yellow: #ffcc00; --dark: #000; --neon: #00ff00; }
-        body { background: var(--dark); color: #fff; font-family: 'DungGeunMo'; margin: 0; overflow: hidden; height: 100vh; }
+        /* CSS: 디자인 */
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f2f5;
+            margin-top: 50px;
+        }
 
-        /* 모니터 선택 화면 */
-        #monitor-selector { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 20px; padding: 20px; height: 100vh; background: #111; position: fixed; inset: 0; z-index: 10000; }
-        .selector-screen { background: #222; border: 5px solid #444; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; cursor: pointer; color: #aaa; transition: 0.2s; }
-        .selector-screen:hover { border-color: var(--neon); color: var(--neon); transform: scale(1.02); }
+        h2 { color: #333; }
 
-        #main-game { display: none; height: 100vh; flex-direction: column; }
-        #lobby { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 9000; display: flex; align-items: center; justify-content: center; }
-        .start-btn { padding: 40px 100px; font-size: 4rem; background: var(--neon); color: #000; border: none; cursor: pointer; border-radius: 20px; font-family: 'DungGeunMo'; box-shadow: 0 0 50px var(--neon); }
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 100px); /* 4열 배치 */
+            gap: 15px;
+            margin-top: 20px;
+        }
 
-        /* 상단 대시보드 구조 개선 */
-        #top-dashboard { height: 180px; background: #000; border-bottom: 6px solid #444; display: flex; flex-direction: column; }
-        .top-main { display: flex; align-items: center; justify-content: space-between; flex: 1; padding: 0 30px; }
-        #timer-disp { font-size: 5rem; color: var(--yellow); min-width: 220px; text-align: center; text-shadow: 0 0 25px var(--yellow); font-variant-numeric: tabular-nums; }
-        
-        /* 10초 바 - 가시성 극대화 */
-        #shuffle-container { width: 100%; height: 25px; background: #222; position: relative; border-top: 4px solid #444; }
-        #shuffle-bar { width: 100%; height: 100%; background: var(--neon) !important; box-shadow: 0 0 20px var(--neon); transition: width 0.1s linear; }
+        .card {
+            width: 100px;
+            height: 140px;
+            perspective: 1000px;
+            cursor: pointer;
+        }
 
-        .territory-zone { display: flex; gap: 15px; }
-        .ter-card { background: #1a1a1a; border: 3px solid #555; padding: 8px; width: 140px; text-align: center; border-radius: 12px; position: relative; }
-        .ter-card.completed { border-color: var(--yellow); background: #332b00; box-shadow: 0 0 20px var(--yellow); }
-        .gauge-container { height: 12px; background: #000; border-radius: 6px; overflow: hidden; margin: 8px 0; border: 1px solid #444; }
-        .gauge-fill { height: 100%; transition: width 0.3s ease; }
-        .up-btn { position: absolute; inset: 0; background: var(--yellow); color: #000; border: none; font-family: 'DungGeunMo'; font-size: 1.5rem; font-weight: bold; cursor: pointer; display: none; z-index: 100; border-radius: 10px; animation: blink 0.5s infinite; }
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.5s;
+            transform-style: preserve-3d;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
 
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        /* 카드가 뒤집혔을 때 애니메이션 */
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
 
-        /* 게임 보드 및 단어 카드 */
-        #game-view { flex: 1; display: flex; flex-direction: column; position: relative; background: #111; }
-        .board { flex: 1; display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; padding: 20px; background: rgba(0,0,0,0.9); }
-        .card { background: rgba(255,255,255,0.03); border: 2px solid #333; color: #666; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; border-radius: 6px; font-weight: bold; }
-        
-        /* 점유 카드 디자인 (확실한 피드백) */
-        .card.owned-red { background: var(--red) !important; color: #fff !important; border: 3px solid #fff !important; box-shadow: 0 0 20px var(--red); z-index: 5; }
-        .card.owned-blue { background: var(--blue) !important; color: #fff !important; border: 3px solid #fff !important; box-shadow: 0 0 20px var(--blue); z-index: 5; }
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            border-radius: 10px;
+            border: 2px solid #fff;
+        }
 
-        /* 입력창 */
-        .input-area { height: 130px; background: #000; display: flex; align-items: center; padding: 0 40px; border-top: 6px solid var(--yellow); }
-        .input-box { flex: 1; height: 90px; background: #111; border: 4px solid var(--yellow); font-size: 4.5rem; text-align: center; color: #fff; font-family: 'DungGeunMo'; outline: none; caret-color: var(--yellow); }
+        /* 카드 뒷면 (물음표 표시) */
+        .card-back {
+            background-color: #4A90E2;
+            color: white;
+        }
 
-        /* 오버레이 */
-        .watcher { position: fixed; inset: 0; background: rgba(255,0,0,0.4); border: 50px solid var(--red); z-index: 9999; display: none; align-items: center; justify-content: center; flex-direction: column; pointer-events: none; }
-        #countdown { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 11000; display: none; align-items: center; justify-content: center; font-size: 25rem; color: var(--yellow); text-shadow: 0 0 60px var(--yellow); }
+        /* 카드 앞면 (이모지 표시) */
+        .card-front {
+            background-color: #ffffff;
+            transform: rotateY(180deg);
+        }
+
+        button {
+            margin-top: 30px;
+            padding: 10px 25px;
+            font-size: 1rem;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background-color: #555;
+        }
     </style>
 </head>
-<body onclick="focusInput()" onkeydown="focusInput()">
+<body>
 
-<div id="monitor-selector">
-    <div class="selector-screen" onclick="selectMonitor(1)">MONITOR 1<br>(MASTER)</div>
-    <div class="selector-screen" onclick="selectMonitor(2)">MONITOR 2</div>
-    <div class="selector-screen" onclick="selectMonitor(3)">MONITOR 3</div>
-    <div class="selector-screen" onclick="selectMonitor(4)">MONITOR 4</div>
-</div>
+    <h2>판 뒤집기 게임</h2>
+    <div class="game-board" id="board"></div>
+    <button onclick="initGame()">게임 재시작</button>
 
-<div id="main-game">
-    <div id="lobby"><button class="start-btn" onclick="globalInit()">게임 시작</button></div>
-    <div id="countdown">3</div>
-    <div class="watcher" id="watcher-eye"><i class="fas fa-eye" style="font-size:18rem; color:red;"></i><h1 style="font-size:4rem; color:red; background:black;">감시 모드: 입력 멈춰!</h1></div>
-
-    <div id="top-dashboard">
-        <div class="top-main">
-            <div id="timer-disp">02:00</div>
-            <div class="territory-zone" id="ter-ui"></div>
-        </div>
-        <div id="shuffle-container"><div id="shuffle-bar"></div></div>
-    </div>
-
-    <div id="game-view">
-        <div class="board" id="board"></div>
-        <div class="input-area">
-            <input type="text" id="typer" class="input-box" onkeydown="handleTyping(event)" placeholder="TYPE HERE..." autocomplete="off">
-        </div>
-    </div>
-</div>
-
-<script>
-    // Firebase 경로 (v32 고정)
-    const firebaseConfig = { databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" };
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = app.database().ref('mafia_v32_stable');
-
-    const cats = ['에너지','인프라','자본','기술','문화'];
-    const stages = ['공터','마을','도시','개도국','선진국'];
-    const wordLib = {
-        '에너지': ['석유','가스','원자','태양','풍력','수력','전기','발전','배터리','연료','탄소','지열','핵','유정','비축','전압','엔진','충전','절전','송전'],
-        '인프라': ['도로','철도','항만','공항','교량','터널','수도','하수','댐','건물','도시','주택','단지','철강','기계','공장','물류','운송','창고','설비'],
-        '자본': ['은행','증권','투자','금리','환율','금고','보험','채권','주식','펀드','환전','자산','신용','대출','세금','예산','금융','코인','지폐','수표'],
-        '기술': ['코딩','보안','서버','로봇','드론','위성','통신','양자','칩셋','인공','지능','모바일','센서','데이터','해킹','암호','디지털','알고','비트','코드'],
-        '문화': ['영화','예술','음악','관광','게임','웹툰','역사','언어','백신','의료','교육','철학','논리','법률','전통','패션','스포츠','축제','방송','미디어']
-    };
-
-    let myId = 0, active = false, watcher = false, localTimer = null;
-    let pCards = {}, levels = {red:[0,0,0,0,0], blue:[0,0,0,0,0]}, teams = {1:'red',2:'red',3:'blue',4:'blue'}, words = [];
-
-    function selectMonitor(id) {
-        myId = id;
-        document.getElementById('monitor-selector').style.display = 'none';
-        document.getElementById('main-game').style.display = 'flex';
-        const tUI = document.getElementById('ter-ui');
-        cats.forEach((c, i) => {
-            tUI.innerHTML += `
-                <div class="ter-card" id="ter-${i}">
-                    <span style="font-size:0.9rem; color:var(--neon);" id="txt-${i}">공터</span>
-                    <div class="gauge-container"><div class="gauge-fill" id="gauge-${i}" style="width:0%; background:var(--yellow);"></div></div>
-                    <div style="font-size:0.8rem;" id="cnt-${i}">0/5</div>
-                    <button class="up-btn" id="up-${i}" onclick="upgrade(event, ${i})">진화</button>
-                </div>`;
-        });
-        focusInput();
-    }
-
-    // [핵심] DB 리스너 - 상태 변화 감지
-    db.on('value', snap => {
-        const d = snap.val(); if(!d) return;
-        pCards = d.cards || {};
-        levels = d.levels || {red:[0,0,0,0,0], blue:[0,0,0,0,0]};
-        teams = d.teams || teams;
-        words = d.words || [];
-
-        if(d.state === 'COUNTDOWN' && !active) {
-            startCountdown();
-        } else if(d.state === 'RUNNING' && !active) {
-            startGame();
-        } else if(d.state === 'FINISHED') {
-            active = false;
-            clearInterval(localTimer);
-            alert("게임 종료!");
-            location.reload();
-        }
-        updateUI();
-    });
-
-    function globalInit() {
-        const shuffled = Object.values(wordLib).flat().sort(() => Math.random() - 0.5).slice(0, 100);
-        // 단어를 먼저 확실히 채우고 상태를 바꿈
-        db.set({
-            state: 'COUNTDOWN',
-            words: shuffled,
-            cards: {},
-            levels: {red:[0,0,0,0,0], blue:[0,0,0,0,0]},
-            teams: {1:'red', 2:'red', 3:'blue', 4:'blue'}
-        });
-    }
-
-    function startCountdown() {
-        active = true; // 중복 방지
-        document.getElementById('lobby').style.display = 'none';
-        const cd = document.getElementById('countdown');
-        cd.style.display = 'flex';
-        let c = 3;
-        const intr = setInterval(() => {
-            cd.innerText = c;
-            if(c <= 0) {
-                clearInterval(intr);
-                cd.style.display = 'none';
-                if(myId === 1) db.update({ state: 'RUNNING' });
-            }
-            c--;
-        }, 1000);
-    }
-
-    function startGame() {
-        active = true;
-        let time = 120, shuffle = 10;
-        if(localTimer) clearInterval(localTimer);
-
-        localTimer = setInterval(() => {
-            time--; shuffle--;
-            
-            // 1. 타이머 업데이트
-            document.getElementById('timer-disp').innerText = `${Math.floor(time/60)}:${(time%60).toString().padStart(2,'0')}`;
-            
-            // 2. 10초 바 업데이트 (강제 적용)
-            const sBar = document.getElementById('shuffle-bar');
-            if(sBar) sBar.style.width = (shuffle / 10 * 100) + "%";
-
-            // 3. 셔플 로직
-            if(shuffle <= 0) {
-                shuffle = 10;
-                if(myId === 1) {
-                    const pool = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
-                    const nt = {}; for(let i=1; i<=4; i++) nt[i] = pool[i-1];
-                    db.child('teams').set(nt);
-                }
-            }
-
-            // 4. 감시 모드
-            if(time > 0 && time % 30 === 0) {
-                watcher = true;
-                setTimeout(() => { watcher = false; }, 2000);
-            }
-
-            if(time <= 0 && myId === 1) db.update({ state: 'FINISHED' });
-        }, 1000);
-    }
-
-    function handleTyping(e) {
-        if(watcher) {
-            const team = teams[myId];
-            const owned = Object.keys(pCards).filter(w => pCards[w] === team);
-            if(owned.length >= 2) {
-                db.child('cards').child(owned[0]).remove();
-                db.child('cards').child(owned[1]).remove();
-            }
-            e.target.value = ""; return;
-        }
-        if(e.key !== 'Enter') return;
-        const val = e.target.value.trim();
-        if(words.includes(val)) db.child('cards').child(val).set(teams[myId]);
-        e.target.value = "";
-    }
-
-    function upgrade(e, idx) {
-        e.stopPropagation();
-        const team = teams[myId];
-        const wordSet = wordLib[cats[idx]];
-        const myOwned = Object.keys(pCards).filter(w => pCards[w] === team && wordSet.includes(w));
-        if(myOwned.length >= 5 && levels[team][idx] < 4) {
-            myOwned.slice(0,5).forEach(w => db.child('cards').child(w).remove());
-            const nl = [...levels[team]]; nl[idx]++;
-            db.child('levels').child(team).set(nl);
-        }
-        setTimeout(focusInput, 50);
-    }
-
-    function updateUI() {
-        const team = teams[myId] || 'red';
-        document.getElementById('game-view').style.backgroundColor = (team === 'red' ? 'rgba(255,0,0,0.15)' : 'rgba(0,68,255,0.15)');
-        document.getElementById('watcher-eye').style.display = watcher ? 'flex' : 'none';
-
-        cats.forEach((c, i) => {
-            const count = Object.keys(pCards).filter(w => pCards[w] === team && wordLib[c].includes(w)).length;
-            document.getElementById(`gauge-${i}`).style.width = (Math.min(count, 5)/5*100) + "%";
-            document.getElementById(`cnt-${i}`).innerText = `${count}/5`;
-            const maxL = Math.max(levels.red[i], levels.blue[i]);
-            document.getElementById(`txt-${i}`).innerText = stages[maxL];
-            document.getElementById(`ter-${i}`).className = `ter-card ${maxL===4?'completed':''}`;
-            document.getElementById(`up-${i}`).style.display = (count >= 5 && levels[team][i] < 4) ? 'block' : 'none';
-        });
-
+    <script>
+        // JS: 로직
         const board = document.getElementById('board');
-        if(words.length > 0) {
-            board.innerHTML = words.map(w => {
-                let cls = "";
-                if(pCards[w] === 'red') cls = "owned-red";
-                else if(pCards[w] === 'blue') cls = "owned-blue";
-                return `<div class="card ${cls}">${w}</div>`;
-            }).join('');
-        }
-    }
+        const items = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊']; // 6종류
+        let cardValues = [...items, ...items]; // 각 2장씩 총 12장
+        let flippedCards = []; // 현재 뒤집힌 카드 배열
+        let matchedCount = 0;  // 맞춘 카드 개수
 
-    function focusInput() { 
-        const t = document.getElementById('typer');
-        if(t && document.activeElement !== t) t.focus(); 
-    }
-    setInterval(() => { if(active) focusInput(); }, 1000);
-</script>
+        // 게임 초기화 함수
+        function initGame() {
+            board.innerHTML = '';
+            flippedCards = [];
+            matchedCount = 0;
+            
+            // 카드 섞기
+            cardValues.sort(() => Math.random() - 0.5);
+
+            // 카드 생성
+            cardValues.forEach((val) => {
+                const card = document.createElement('div');
+                card.classList.add('card');
+                card.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-back">?</div>
+                        <div class="card-front">${val}</div>
+                    </div>
+                `;
+                card.addEventListener('click', () => flipCard(card, val));
+                board.appendChild(card);
+            });
+        }
+
+        // 카드 뒤집기 로직
+        function flipCard(card, val) {
+            // 이미 뒤집혔거나, 2장이 이미 뒤집혀 확인 중이면 클릭 방지
+            if (card.classList.contains('flipped') || flippedCards.length === 2) return;
+
+            card.classList.add('flipped');
+            flippedCards.push({ card, val });
+
+            if (flippedCards.length === 2) {
+                checkMatch();
+            }
+        }
+
+        // 일치 여부 확인
+        function checkMatch() {
+            const [first, second] = flippedCards;
+
+            if (first.val === second.val) {
+                // 일치할 경우
+                matchedCount += 2;
+                flippedCards = [];
+                if (matchedCount === cardValues.length) {
+                    setTimeout(() => alert('성공! 모든 짝을 찾았습니다!'), 500);
+                }
+            } else {
+                // 일치하지 않을 경우 (1초 뒤 다시 뒤집기)
+                setTimeout(() => {
+                    first.card.classList.remove('flipped');
+                    second.card.classList.remove('flipped');
+                    flippedCards = [];
+                }, 1000);
+            }
+        }
+
+        // 페이지 로드 시 게임 시작
+        initGame();
+    </script>
 </body>
 </html>
