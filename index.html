@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>NATION BUILDER - MAFIA</title>
+    <title>NATION BUILDER - MAFIA WARFARE</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
@@ -11,46 +11,47 @@
         :root { --red: #ff1a1a; --blue: #1a75ff; --dark: #050505; --gold: #ffea00; --neon: #00ff41; --gray: #333; }
         body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', monospace; margin: 0; overflow: hidden; height: 100vh; transition: background 0.3s; }
         
-        /* 팀별 배경색 모드 */
-        body.team-red { background-color: rgba(255, 26, 26, 0.9); }
-        body.team-blue { background-color: rgba(26, 117, 255, 0.9); }
+        /* 팀별 전체 배경색 변화 */
+        body.bg-red { background-color: rgba(150, 0, 0, 0.95); }
+        body.bg-blue { background-color: rgba(0, 50, 150, 0.95); }
 
-        /* 상단 UI 레이아웃 */
-        #header { height: 180px; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; align-items: center; border-bottom: 4px solid #fff; }
-        #main-timer { font-size: 3.5rem; color: var(--gold); margin: 5px 0; }
+        /* 상단 레이아웃 */
+        #header { height: 180px; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; border-bottom: 3px solid #fff; }
+        #main-timer { font-size: 3.2rem; color: var(--gold); margin: 5px 0; text-shadow: 0 0 10px var(--gold); }
         
-        .territory-container { display: flex; gap: 10px; justify-content: center; width: 98%; }
-        .sector-card { background: #222; border: 2px solid #555; padding: 10px; width: 180px; text-align: center; border-radius: 10px; position: relative; color: #fff; }
-        .sector-card.won-red { border-color: #ff0000; box-shadow: 0 0 15px #ff0000; background: #600; }
-        .sector-card.won-blue { border-color: #004cff; box-shadow: 0 0 15px #004cff; background: #002366; }
+        .territory-row { display: flex; gap: 10px; justify-content: center; width: 98%; }
+        .sector-card { background: #222; border: 2px solid #555; padding: 8px; width: 170px; text-align: center; border-radius: 8px; position: relative; transition: 0.3s; }
+        .sector-card.won-red { border-color: var(--red); box-shadow: 0 0 15px var(--red); background: #400; }
+        .sector-card.won-blue { border-color: var(--blue); box-shadow: 0 0 15px var(--blue); background: #002b5e; }
         
-        .step-icon { font-size: 2rem; margin-bottom: 5px; color: var(--gold); }
-        .step-name { font-size: 0.8rem; color: #aaa; }
-        .prog-bar { font-size: 1.1rem; font-weight: bold; color: var(--neon); }
+        .step-icon { font-size: 1.8rem; margin-bottom: 5px; color: var(--gold); }
+        .prog-text { font-size: 0.9rem; color: var(--neon); font-weight: bold; }
         
-        .up-btn { position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); background: var(--gold); border: 2px solid #000; padding: 5px 15px; font-family: 'DungGeunMo'; font-weight: bold; cursor: pointer; display: none; z-index: 100; animation: blink 0.5s infinite; }
+        /* 한 번에 누르기 쉬운 큰 업그레이드 버튼 */
+        .up-btn { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 234, 0, 0.85); color: #000; border: none; font-family: 'DungGeunMo'; font-size: 1.5rem; font-weight: bold; cursor: pointer; display: none; z-index: 10; border-radius: 6px; }
 
-        /* 셔플 바 */
-        #shuffle-container { width: 100%; height: 15px; background: #000; }
+        /* 10초 셔플 바 */
+        #shuffle-container { width: 100%; height: 12px; background: #000; }
         #shuffle-bar { width: 100%; height: 100%; background: var(--neon); transition: width 1s linear; }
 
-        /* 단어 판 (100개 스크롤 없이 배치) */
-        #game-board { height: calc(100vh - 300px); display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr); gap: 3px; padding: 10px; box-sizing: border-box; }
-        .card { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; color: #fff; transition: 0.2s; font-weight: bold; text-shadow: 1px 1px 2px #000; }
-        .card.red { background: var(--red) !important; color: #fff; border: 2px solid #fff; }
-        .card.blue { background: var(--blue) !important; color: #fff; border: 2px solid #fff; }
+        /* 단어 보드 (100개 스크롤 없이 전체 노출) */
+        #game-board { height: calc(100vh - 295px); display: grid; grid-template-columns: repeat(10, 10fr); grid-template-rows: repeat(10, 10fr); gap: 3px; padding: 10px; box-sizing: border-box; }
+        .card { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #fff; transition: 0.15s; font-weight: bold; }
+        .card.red { background: var(--red) !important; color: #fff; border: 2px solid #fff; z-index: 1; transform: scale(1.02); }
+        .card.blue { background: var(--blue) !important; color: #fff; border: 2px solid #fff; z-index: 1; transform: scale(1.02); }
 
-        /* 입력창 */
-        #footer { height: 100px; display: flex; align-items: center; background: rgba(0,0,0,0.9); }
-        #word-input { width: 100%; height: 100%; background: transparent; border: none; font-size: 5rem; text-align: center; color: #fff; font-family: 'DungGeunMo'; outline: none; }
+        /* 입력창 영역 */
+        #footer { height: 103px; display: flex; align-items: center; background: rgba(0,0,0,0.9); border-top: 3px solid var(--gold); }
+        .input-label { padding: 0 20px; color: var(--gold); font-size: 1.2rem; white-space: nowrap; }
+        #word-input { width: 100%; height: 100%; background: transparent; border: none; font-size: 4rem; text-align: center; color: #fff; font-family: 'DungGeunMo'; outline: none; }
 
-        /* 특수 효과 */
-        #bonus-msg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--gold); color: #000; padding: 30px 60px; font-size: 4rem; z-index: 1000; display: none; border: 10px double #000; }
-        #surveillance { position: fixed; inset: 0; background: rgba(255,0,0,0.7); z-index: 2000; display: none; align-items: center; justify-content: center; font-size: 6rem; color: #fff; text-shadow: 0 0 20px #000; pointer-events: none; }
+        /* 특수 이벤트 */
+        #bonus-msg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--gold); color: #000; padding: 25px 50px; font-size: 3.5rem; z-index: 1000; display: none; border: 8px double #000; box-shadow: 0 0 50px #000; }
+        #surveillance { position: fixed; inset: 0; background: rgba(255,0,0,0.8); z-index: 2000; display: none; align-items: center; justify-content: center; font-size: 5rem; color: #fff; text-shadow: 0 0 20px #000; }
 
-        /* 오버레이 창 */
-        #lobby, #result-screen { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .btn-big { padding: 30px 80px; font-size: 3rem; background: var(--gold); font-family: 'DungGeunMo'; cursor: pointer; border: none; border-radius: 20px; }
+        /* 팝업 UI */
+        #lobby, #result-screen { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .btn-start { padding: 20px 60px; font-size: 2.5rem; background: var(--gold); font-family: 'DungGeunMo'; cursor: pointer; border: none; border-radius: 10px; margin: 10px; }
 
         @keyframes blink { 50% { opacity: 0; } }
     </style>
@@ -58,41 +59,43 @@
 <body id="main-body">
 
 <div id="lobby">
-    <h1 style="font-size: 5rem; color: var(--gold); margin-bottom: 50px;">NATION BUILDER</h1>
-    <button class="btn-big" onclick="GAME.requestStart()">게임 시작하기</button>
+    <h1 style="font-size: 4rem; color: var(--gold); margin-bottom: 30px;">NATION BUILDER: MAFIA</h1>
+    <button class="btn-start" onclick="GAME.requestStart()">게임 시작하기</button>
 </div>
 
 <div id="header">
     <div id="main-timer">02:00</div>
-    <div class="territory-container" id="territory-container"></div>
+    <div class="territory-row" id="territory-row"></div>
 </div>
 <div id="shuffle-container"><div id="shuffle-bar"></div></div>
 
 <div id="game-board"></div>
 
 <div id="footer">
-    <input type="text" id="word-input" autocomplete="off" disabled>
+    <div class="input-label">COMMAND ></div>
+    <input type="text" id="word-input" autocomplete="off" disabled placeholder="대기 중...">
 </div>
 
-<div id="bonus-msg">보너스: <span id="bonus-word"></span></div>
-<div id="surveillance">🚨 감시 중! 🚨</div>
+<div id="bonus-msg">!! 보너스 !!<br><span id="bonus-word"></span></div>
+<div id="surveillance">🚨 감시 모드 🚨<br>입력 중지!</div>
 
 <div id="result-screen" style="display:none;">
-    <h1 style="font-size: 4rem; color: var(--gold); margin-bottom: 30px;">라운드 통계</h1>
-    <div id="result-content" style="display:flex; gap:30px; margin-bottom:40px;"></div>
-    <div style="display:flex; gap:20px;">
-        <button class="btn-big" style="font-size:1.5rem;" onclick="GAME.closeResult()">결과 닫기</button>
-        <button class="btn-big" style="font-size:1.5rem; background:var(--neon);" onclick="GAME.requestStart()">게임 이어서 하기</button>
+    <h1 style="font-size: 3.5rem; color: var(--gold); margin-bottom: 20px;">ROUND 결과 분석</h1>
+    <div id="result-content" style="display:flex; gap:20px; margin-bottom:30px;"></div>
+    <div style="display:flex;">
+        <button class="btn-start" style="font-size:1.5rem; background:#444; color:#fff;" onclick="GAME.closeResult()">결과 창 닫기</button>
+        <button class="btn-start" style="font-size:1.5rem; background:var(--neon);" onclick="GAME.requestStart()">게임 이어서 하기</button>
     </div>
 </div>
 
 <script>
+// --- 데이터 및 설정 ---
 const CONFIG = {
     sectors: ['에너지', '인프라', '자본', '기술', '문화'],
     levels: ['공터', '마을', '도시', '개발도상국', '선진국'],
     icons: ['fa-seedling', 'fa-home', 'fa-city', 'fa-industry', 'fa-crown'],
     wordPool: {
-        '에너지': ['석유','전기','원자력','태양광','배터리','석탄','가스','풍력','수력','조력','송전','전압','발전','탄소','연료','그리드','변전','엔진','충전','방사능'],
+        '에너지': ['석유','전기','원자력','태양광','배터리','석탄','가스','풍력','수력','조력','송전','전압','발전','탄소','연료','그리드','변전','엔진','충전','에너지'],
         '인프라': ['도로','철도','항만','공항','교량','터널','빌딩','강철','시멘트','크레인','상수도','건설','물류','유통','설계','도시','통신','벽돌','중장비','정비'],
         '자본': ['주식','채권','투자','은행','금리','환율','세금','예산','보험','증권','펀드','경제','화폐','비용','자산','무역','코인','배당','증시','부채'],
         '기술': ['AI','로봇','코딩','보안','서버','반도체','데이터','양자','해킹','드론','위성','센서','백신','모바일','칩','소스','회로','머신','인터넷','웹'],
@@ -100,28 +103,30 @@ const CONFIG = {
     }
 };
 
-const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('mafia_final_v1');
+// --- Firebase 연결 (제공된 경로 활용) ---
+const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('mafia_warfare_v5');
 
 const GAME = {
     team: 'red',
     slot: 'm' + (new URLSearchParams(window.location.search).get('m') || '1'),
     active: false,
+    usedWords: new Set(),
 
     init() {
-        this.renderSectors();
+        this.renderInitialSectors();
         this.listenFirebase();
         this.bindEvents();
     },
 
-    renderSectors() {
-        const container = document.getElementById('territory-container');
-        container.innerHTML = CONFIG.sectors.map((s, i) => `
+    renderInitialSectors() {
+        const row = document.getElementById('territory-row');
+        row.innerHTML = CONFIG.sectors.map((s, i) => `
             <div class="sector-card" id="sector-${i}">
-                <button class="up-btn" id="up-btn-${i}" onclick="GAME.upgrade(${i})">UPGRADE</button>
+                <button class="up-btn" id="up-btn-${i}" onclick="GAME.upgrade(${i})">UPGRADE!</button>
                 <i class="fas ${CONFIG.icons[0]} step-icon" id="icon-${i}"></i>
-                <div class="step-name" id="step-name-${i}">공터</div>
-                <div style="font-weight:bold; font-size:1.2rem; margin:5px 0;">${s}</div>
-                <div class="prog-bar" id="prog-${i}">0 / 5</div>
+                <div style="font-size:0.7rem; color:#888;">${CONFIG.levels[0]}</div>
+                <div style="font-weight:bold; margin:3px 0;">${s}</div>
+                <div class="prog-text" id="prog-${i}">0 / 5</div>
             </div>
         `).join('');
     },
@@ -135,145 +140,159 @@ const GAME = {
     },
 
     resetDB() {
+        const words = this.generateNewWords();
         db.set({
             state: 'READY', timer: 120, shuffle: 10,
-            words: Object.values(CONFIG.wordPool).flat().sort(()=>Math.random()-0.5),
-            cards: {},
+            words: words, cards: {},
             levels: { red: [0,0,0,0,0], blue: [0,0,0,0,0] },
             teams: { m1:'red', m2:'red', m3:'blue', m4:'blue' },
-            bonus: "", surveillance: false
+            bonus: "", surveillance: false, round: 1
         });
     },
 
+    generateNewWords() {
+        // 모든 단어 풀에서 랜덤하게 섞어서 100개 추출 (실제로는 각 분야 20개씩 100개)
+        return Object.values(CONFIG.wordPool).flat().sort(() => Math.random() - 0.5);
+    },
+
     sync(data) {
-        // 1. 상태 전환
+        // 1. 상태 및 배경색 동기화
         document.getElementById('lobby').style.display = (data.state === 'READY') ? 'flex' : 'none';
         document.getElementById('result-screen').style.display = (data.state === 'FINISHED') ? 'flex' : 'none';
         
-        // 2. 배경색으로 팀 구분 (전체 배경)
         this.team = data.teams[this.slot];
-        const body = document.getElementById('main-body');
-        body.className = (this.team === 'red') ? 'team-red' : 'team-blue';
+        document.body.className = (this.team === 'red') ? 'bg-red' : 'bg-blue';
         document.getElementById('word-input').disabled = (data.state !== 'RUNNING');
-        
-        // 3. 타이머 및 셔플바
+
+        // 2. 실시간 타이머 & 셔플바
         document.getElementById('main-timer').innerText = this.formatTime(data.timer);
         document.getElementById('shuffle-bar').style.width = (data.shuffle / 10) * 100 + "%";
 
-        // 4. 단어 카드 (100개 그리드)
+        // 3. 단어 보드 (실시간 카드 소유권 반영)
         const board = document.getElementById('game-board');
-        if(board.childElementCount === 0) {
+        if(board.childElementCount === 0 || data.timer === 120) { // 라운드 시작 시 새로 그림
             board.innerHTML = data.words.map(w => `<div class="card" id="card-${w}">${w}</div>`).join('');
         }
         
-        const myCounts = [0,0,0,0,0];
-        Object.entries(data.cards || {}).forEach(([word, team]) => {
+        const myResourceCounts = [0,0,0,0,0];
+        Object.entries(data.cards || {}).forEach(([word, owner]) => {
             const el = document.getElementById(`card-${word}`);
-            if(el) el.className = `card ${team}`;
-            if(team === this.team) {
+            if(el) {
+                el.className = `card ${owner}`;
+            }
+            if(owner === this.team) {
                 const sIdx = this.getSectorIdx(word);
-                if(sIdx !== -1) myCounts[sIdx]++;
+                if(sIdx !== -1) myResourceCounts[sIdx]++;
             }
         });
 
-        // 5. 영토 시각화 (아이콘 단계별 변화)
+        // 4. 상단 영토 단계/아이콘 동기화
         CONFIG.sectors.forEach((_, i) => {
-            const rL = data.levels.red[i], bL = data.levels.blue[i], myL = data.levels[this.team][i];
+            const rLv = data.levels.red[i], bLv = data.levels.blue[i], myLv = data.levels[this.team][i];
             const sectorEl = document.getElementById(`sector-${i}`);
             
-            // 선진국 점령 시
-            if(rL === 4) sectorEl.className = "sector-card won-red";
-            else if(bL === 4) sectorEl.className = "sector-card won-blue";
+            if(rLv === 4) sectorEl.className = "sector-card won-red";
+            else if(bLv === 4) sectorEl.className = "sector-card won-blue";
             else sectorEl.className = "sector-card";
 
-            const maxL = Math.max(rL, bL);
-            document.getElementById(`icon-${i}`).className = `fas ${CONFIG.icons[maxL]} step-icon`;
-            document.getElementById(`step-name-${i}`).innerText = CONFIG.levels[maxL];
-            document.getElementById(`prog-${i}`).innerText = `${myCounts[i]} / 5 (LV.${myL})`;
+            const currentMax = Math.max(rLv, bLv);
+            document.getElementById(`icon-${i}`).className = `fas ${CONFIG.icons[currentMax]} step-icon`;
+            document.getElementById(`prog-${i}`).innerText = `${myResourceCounts[i]} / 5 (내단계: ${CONFIG.levels[myLv]})`;
             
+            // 업그레이드 버튼 노출 조건
             const upBtn = document.getElementById(`up-btn-${i}`);
-            upBtn.style.display = (myCounts[i] >= 5 && myL < 4 && rL < 4 && bL < 4) ? 'block' : 'none';
+            const isSectorTaken = (rLv === 4 || bLv === 4);
+            upBtn.style.display = (myResourceCounts[i] >= 5 && myLv < 4 && !isSectorTaken) ? 'block' : 'none';
         });
 
-        // 6. 보너스 및 감시
+        // 5. 이벤트 효과
         document.getElementById('bonus-msg').style.display = data.bonus ? 'block' : 'none';
         document.getElementById('bonus-word').innerText = data.bonus;
         document.getElementById('surveillance').style.display = data.surveillance ? 'flex' : 'none';
 
-        // 7. 결과 화면 데이터
+        // 6. 결과 화면 데이터
         if(data.state === 'FINISHED') {
             document.getElementById('result-content').innerHTML = ['red','blue'].map(t => `
-                <div style="background:#222; padding:20px; border:4px solid var(--${t}); text-align:center;">
+                <div style="background:#000; padding:20px; border:4px solid var(--${t}); min-width:200px;">
                     <h2 style="color:var(--${t}); font-size:2rem;">${t.toUpperCase()} MAFIA</h2>
                     ${CONFIG.sectors.map((s,i)=>`<div>${s}: ${CONFIG.levels[data.levels[t][i]]} <i class="fas ${CONFIG.icons[data.levels[t][i]]}"></i></div>`).join('')}
                 </div>
             `).join('');
         }
 
-        // 8. 마스터 타이머 (m1 모니터만 실행)
+        // 7. 마스터 모니터(m1) 타이머 로직
         if(this.slot === 'm1' && data.state === 'RUNNING' && !this.active) {
             this.active = true;
-            this.runMasterLogic();
+            this.runMasterTimer();
         }
     },
 
-    runMasterLogic() {
+    runMasterTimer() {
         let bTick = 20, sTick = 30;
-        const interval = setInterval(() => {
+        const tick = setInterval(() => {
             db.once('value', snap => {
                 const data = snap.val();
-                if(data.state !== 'RUNNING') return clearInterval(interval);
+                if(data.state !== 'RUNNING') return clearInterval(tick);
 
-                let upd = { timer: data.timer - 1, shuffle: data.shuffle - 1 };
+                let updates = { timer: data.timer - 1, shuffle: data.shuffle - 1 };
                 bTick--; sTick--;
 
-                if(upd.shuffle <= 0) {
-                    upd.shuffle = 10;
+                // 10초 셔플
+                if(updates.shuffle <= 0) {
+                    updates.shuffle = 10;
                     const ts = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
-                    upd.teams = { m1:ts[0], m2:ts[1], m3:ts[2], m4:ts[3] };
+                    updates.teams = { m1:ts[0], m2:ts[1], m3:ts[2], m4:ts[3] };
                 }
+                // 20초 보너스
                 if(bTick <= 0) {
                     bTick = 20;
-                    const pool = Object.values(CONFIG.wordPool).flat();
-                    upd.bonus = pool[Math.floor(Math.random()*pool.length)];
+                    const allWords = Object.values(CONFIG.wordPool).flat();
+                    updates.bonus = allWords[Math.floor(Math.random()*allWords.length)];
                 }
+                // 30초 감시 (2초간)
                 if(sTick <= 0) {
                     sTick = 30;
                     db.update({ surveillance: true });
                     setTimeout(() => db.update({ surveillance: false }), 2000);
                 }
-                if(upd.timer <= 0) upd.state = 'FINISHED';
-                db.update(upd);
+
+                if(updates.timer <= 0) updates.state = 'FINISHED';
+                db.update(updates);
             });
         }, 1000);
     },
 
     requestStart() {
-        db.update({ state: 'RUNNING', timer: 120, shuffle: 10, bonus: "", surveillance: false });
+        // 새 라운드 시 단어 교체 (중복 방지)
+        const newWords = this.generateNewWords();
+        db.update({ 
+            state: 'RUNNING', timer: 120, shuffle: 10, 
+            words: newWords, cards: {}, bonus: "", surveillance: false 
+        });
     },
 
     closeResult() { document.getElementById('result-screen').style.display = 'none'; },
 
     bindEvents() {
-        const inp = document.getElementById('word-input');
-        inp.onkeydown = (e) => {
+        const input = document.getElementById('word-input');
+        input.onkeydown = (e) => {
             if(e.key === 'Enter') {
-                const val = inp.value.trim();
+                const val = input.value.trim();
                 db.once('value', snap => {
                     const data = snap.val();
-                    if(data.surveillance) {
+                    if(data.surveillance) { // 감시 패널티
                         const mine = Object.keys(data.cards||{}).filter(w => data.cards[w] === this.team);
                         if(mine.length > 0) db.child('cards').child(mine[0]).remove();
-                    } else if(val === data.bonus) {
-                        const enemy = this.team === 'red' ? 'blue' : 'red';
+                    } else if(val === data.bonus) { // 보너스 역전
+                        const enemy = (this.team === 'red') ? 'blue' : 'red';
                         const eCards = Object.keys(data.cards||{}).filter(w => data.cards[w] === enemy);
                         eCards.slice(0, 5).forEach(w => db.child('cards').child(w).set(this.team));
                         db.update({ bonus: "" });
-                    } else if(data.words.includes(val)) {
+                    } else if(data.words.includes(val)) { // 일반 점령
                         db.child('cards').child(val).set(this.team);
                     }
                 });
-                inp.value = "";
+                input.value = "";
             }
         };
     },
@@ -281,13 +300,17 @@ const GAME = {
     upgrade(idx) {
         db.once('value', snap => {
             const data = snap.val();
-            const words = CONFIG.wordPool[CONFIG.sectors[idx]];
-            const mine = Object.keys(data.cards||{}).filter(w => data.cards[w] === this.team && words.includes(w));
+            const sectorWords = CONFIG.wordPool[CONFIG.sectors[idx]];
+            const mine = Object.keys(data.cards||{}).filter(w => data.cards[w] === this.team && sectorWords.includes(w));
+            
             if(mine.length >= 5) {
+                // 단어 소모
                 mine.slice(0,5).forEach(w => db.child('cards').child(w).remove());
                 const lvs = data.levels[this.team];
                 lvs[idx]++;
                 db.child('levels').child(this.team).set(lvs);
+                
+                // 승리 판정
                 if(lvs.filter(v => v === 4).length >= 3) db.update({ state: 'FINISHED' });
             }
         });
