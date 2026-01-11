@@ -9,86 +9,90 @@
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
         :root { --red: #ff1a1a; --blue: #1a75ff; --dark: #050505; --gold: #ffea00; --neon: #00ff41; --gray: #333; }
-        body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', monospace; margin: 0; overflow: hidden; height: 100vh; }
+        body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', monospace; margin: 0; overflow: hidden; height: 100vh; transition: background 0.3s; }
         
-        /* 헤더: 타이머 & 영토 상태 */
-        #top-ui { height: 160px; background: #000; border-bottom: 4px solid var(--gray); display: flex; flex-direction: column; align-items: center; position: relative; }
-        #main-timer { font-size: 3.5rem; color: var(--gold); text-shadow: 0 0 10px var(--gold); margin: 5px 0; }
-        
-        .territory-row { display: flex; gap: 12px; width: 100%; justify-content: center; }
-        .sector-card { background: #111; border: 2px solid var(--gray); padding: 10px; width: 140px; text-align: center; border-radius: 8px; position: relative; }
-        .sector-card.cap-red { border-color: var(--red); box-shadow: 0 0 15px var(--red); background: rgba(255,26,26,0.1); }
-        .sector-card.cap-blue { border-color: var(--blue); box-shadow: 0 0 15px var(--blue); background: rgba(26,117,255,0.1); }
-        
-        .lvl-step { font-size: 0.7rem; color: #888; display: block; }
-        .sector-name { font-size: 1rem; font-weight: bold; margin: 4px 0; }
-        .progress-box { font-size: 0.8rem; color: var(--neon); background: #000; border-radius: 4px; padding: 2px; }
-        
-        /* 업그레이드 버튼 */
-        .up-btn { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: var(--gold); color: #000; border: none; padding: 5px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; display: none; animation: blink 0.5s infinite; z-index: 100; font-family: 'DungGeunMo'; }
+        /* 팀별 배경색 모드 */
+        body.team-red { background-color: rgba(255, 26, 26, 0.9); }
+        body.team-blue { background-color: rgba(26, 117, 255, 0.9); }
 
-        /* 10초 셔플 바 */
-        #shuffle-container { width: 100%; height: 12px; background: #222; }
+        /* 상단 UI 레이아웃 */
+        #header { height: 180px; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; align-items: center; border-bottom: 4px solid #fff; }
+        #main-timer { font-size: 3.5rem; color: var(--gold); margin: 5px 0; }
+        
+        .territory-container { display: flex; gap: 10px; justify-content: center; width: 98%; }
+        .sector-card { background: #222; border: 2px solid #555; padding: 10px; width: 180px; text-align: center; border-radius: 10px; position: relative; color: #fff; }
+        .sector-card.won-red { border-color: #ff0000; box-shadow: 0 0 15px #ff0000; background: #600; }
+        .sector-card.won-blue { border-color: #004cff; box-shadow: 0 0 15px #004cff; background: #002366; }
+        
+        .step-icon { font-size: 2rem; margin-bottom: 5px; color: var(--gold); }
+        .step-name { font-size: 0.8rem; color: #aaa; }
+        .prog-bar { font-size: 1.1rem; font-weight: bold; color: var(--neon); }
+        
+        .up-btn { position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); background: var(--gold); border: 2px solid #000; padding: 5px 15px; font-family: 'DungGeunMo'; font-weight: bold; cursor: pointer; display: none; z-index: 100; animation: blink 0.5s infinite; }
+
+        /* 셔플 바 */
+        #shuffle-container { width: 100%; height: 15px; background: #000; }
         #shuffle-bar { width: 100%; height: 100%; background: var(--neon); transition: width 1s linear; }
 
-        /* 단어 보드 */
-        #game-view { height: calc(100vh - 274px); display: flex; align-items: center; justify-content: center; position: relative; overflow-y: auto; }
-        #card-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; width: 95%; padding: 20px; }
-        .card { background: #1a1a1a; border: 1px solid #333; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: #666; transition: 0.2s; }
-        .card.red { background: var(--red) !important; color: #fff; border: none; font-weight: bold; }
-        .card.blue { background: var(--blue) !important; color: #fff; border: none; font-weight: bold; }
+        /* 단어 판 (100개 스크롤 없이 배치) */
+        #game-board { height: calc(100vh - 300px); display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr); gap: 3px; padding: 10px; box-sizing: border-box; }
+        .card { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; color: #fff; transition: 0.2s; font-weight: bold; text-shadow: 1px 1px 2px #000; }
+        .card.red { background: var(--red) !important; color: #fff; border: 2px solid #fff; }
+        .card.blue { background: var(--blue) !important; color: #fff; border: 2px solid #fff; }
 
-        /* 입력창 & 팀 컬러 배경 */
-        #input-area { height: 102px; border-top: 4px solid var(--gray); display: flex; align-items: center; transition: background 0.3s; }
-        #word-input { width: 100%; height: 100%; background: transparent; border: none; font-size: 4.5rem; text-align: center; color: #fff; font-family: 'DungGeunMo'; outline: none; }
-        
+        /* 입력창 */
+        #footer { height: 100px; display: flex; align-items: center; background: rgba(0,0,0,0.9); }
+        #word-input { width: 100%; height: 100%; background: transparent; border: none; font-size: 5rem; text-align: center; color: #fff; font-family: 'DungGeunMo'; outline: none; }
+
         /* 특수 효과 */
-        #bonus-box { position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%); background: var(--gold); color: #000; padding: 20px 50px; font-size: 3rem; z-index: 500; display: none; border: 5px solid #000; }
-        #surveillance { position: fixed; inset: 0; background: rgba(255,0,0,0.6); z-index: 1000; display: none; align-items: center; justify-content: center; font-size: 5rem; font-weight: bold; pointer-events: none; }
+        #bonus-msg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--gold); color: #000; padding: 30px 60px; font-size: 4rem; z-index: 1000; display: none; border: 10px double #000; }
+        #surveillance { position: fixed; inset: 0; background: rgba(255,0,0,0.7); z-index: 2000; display: none; align-items: center; justify-content: center; font-size: 6rem; color: #fff; text-shadow: 0 0 20px #000; pointer-events: none; }
 
-        /* 팝업 UI */
-        #lobby, #result-screen { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .start-btn { padding: 25px 60px; font-size: 2.5rem; background: var(--gold); border: none; font-family: 'DungGeunMo'; cursor: pointer; }
+        /* 오버레이 창 */
+        #lobby, #result-screen { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .btn-big { padding: 30px 80px; font-size: 3rem; background: var(--gold); font-family: 'DungGeunMo'; cursor: pointer; border: none; border-radius: 20px; }
 
         @keyframes blink { 50% { opacity: 0; } }
     </style>
 </head>
-<body>
+<body id="main-body">
 
 <div id="lobby">
-    <h1 style="font-size: 4rem; color: var(--gold); margin-bottom: 20px;">NATION BUILDER</h1>
-    <p style="font-size: 1.5rem; margin-bottom: 40px;">MAFIA WARFARE : TERRITORY DOMINATION</p>
-    <button class="start-btn" onclick="GAME.requestStart()">START OPERATION</button>
+    <h1 style="font-size: 5rem; color: var(--gold); margin-bottom: 50px;">NATION BUILDER</h1>
+    <button class="btn-big" onclick="GAME.requestStart()">게임 시작하기</button>
 </div>
 
-<div id="top-ui">
+<div id="header">
     <div id="main-timer">02:00</div>
-    <div class="territory-row" id="territory-row"></div>
+    <div class="territory-container" id="territory-container"></div>
 </div>
 <div id="shuffle-container"><div id="shuffle-bar"></div></div>
 
-<div id="game-view">
-    <div id="bonus-box">URGENT: <span id="bonus-word"></span></div>
-    <div id="surveillance">🚨 감시 중: 중단하십시오! 🚨</div>
-    <div id="card-grid"></div>
-</div>
+<div id="game-board"></div>
 
-<div id="input-area">
+<div id="footer">
     <input type="text" id="word-input" autocomplete="off" disabled>
 </div>
 
+<div id="bonus-msg">보너스: <span id="bonus-word"></span></div>
+<div id="surveillance">🚨 감시 중! 🚨</div>
+
 <div id="result-screen" style="display:none;">
-    <h1 style="color:var(--gold); font-size:3.5rem;">ROUND ANALYSIS</h1>
-    <div id="result-stats" style="display:flex; gap:50px; margin:40px 0; font-size:1.5rem;"></div>
-    <button onclick="GAME.requestStart()" class="start-btn">NEXT ROUND</button>
+    <h1 style="font-size: 4rem; color: var(--gold); margin-bottom: 30px;">라운드 통계</h1>
+    <div id="result-content" style="display:flex; gap:30px; margin-bottom:40px;"></div>
+    <div style="display:flex; gap:20px;">
+        <button class="btn-big" style="font-size:1.5rem;" onclick="GAME.closeResult()">결과 닫기</button>
+        <button class="btn-big" style="font-size:1.5rem; background:var(--neon);" onclick="GAME.requestStart()">게임 이어서 하기</button>
+    </div>
 </div>
 
 <script>
 const CONFIG = {
     sectors: ['에너지', '인프라', '자본', '기술', '문화'],
     levels: ['공터', '마을', '도시', '개발도상국', '선진국'],
+    icons: ['fa-seedling', 'fa-home', 'fa-city', 'fa-industry', 'fa-crown'],
     wordPool: {
-        '에너지': ['석유','전기','원자력','태양광','배터리','석탄','가스','풍력','수력','조력','송전','전압','발전','탄소','연료','그리드','변전','엔진','충전','에너지'],
+        '에너지': ['석유','전기','원자력','태양광','배터리','석탄','가스','풍력','수력','조력','송전','전압','발전','탄소','연료','그리드','변전','엔진','충전','방사능'],
         '인프라': ['도로','철도','항만','공항','교량','터널','빌딩','강철','시멘트','크레인','상수도','건설','물류','유통','설계','도시','통신','벽돌','중장비','정비'],
         '자본': ['주식','채권','투자','은행','금리','환율','세금','예산','보험','증권','펀드','경제','화폐','비용','자산','무역','코인','배당','증시','부채'],
         '기술': ['AI','로봇','코딩','보안','서버','반도체','데이터','양자','해킹','드론','위성','센서','백신','모바일','칩','소스','회로','머신','인터넷','웹'],
@@ -96,7 +100,7 @@ const CONFIG = {
     }
 };
 
-const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('mafia_v4');
+const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('mafia_final_v1');
 
 const GAME = {
     team: 'red',
@@ -110,13 +114,14 @@ const GAME = {
     },
 
     renderSectors() {
-        const row = document.getElementById('territory-row');
-        row.innerHTML = CONFIG.sectors.map((s, i) => `
+        const container = document.getElementById('territory-container');
+        container.innerHTML = CONFIG.sectors.map((s, i) => `
             <div class="sector-card" id="sector-${i}">
                 <button class="up-btn" id="up-btn-${i}" onclick="GAME.upgrade(${i})">UPGRADE</button>
-                <span class="lvl-step" id="lvl-${i}">공터</span>
-                <div class="sector-name">${s}</div>
-                <div class="progress-box" id="prog-${i}">0 / 5</div>
+                <i class="fas ${CONFIG.icons[0]} step-icon" id="icon-${i}"></i>
+                <div class="step-name" id="step-name-${i}">공터</div>
+                <div style="font-weight:bold; font-size:1.2rem; margin:5px 0;">${s}</div>
+                <div class="prog-bar" id="prog-${i}">0 / 5</div>
             </div>
         `).join('');
     },
@@ -141,107 +146,102 @@ const GAME = {
     },
 
     sync(data) {
-        // 1. 상태별 화면 전환
+        // 1. 상태 전환
         document.getElementById('lobby').style.display = (data.state === 'READY') ? 'flex' : 'none';
         document.getElementById('result-screen').style.display = (data.state === 'FINISHED') ? 'flex' : 'none';
         
-        // 2. 10초 셔플 & 팀 배정 (핵심)
+        // 2. 배경색으로 팀 구분 (전체 배경)
         this.team = data.teams[this.slot];
-        document.getElementById('input-area').style.background = (this.team === 'red') ? 'var(--red)' : 'var(--blue)';
+        const body = document.getElementById('main-body');
+        body.className = (this.team === 'red') ? 'team-red' : 'team-blue';
         document.getElementById('word-input').disabled = (data.state !== 'RUNNING');
         
-        // 3. 타이머 및 바
+        // 3. 타이머 및 셔플바
         document.getElementById('main-timer').innerText = this.formatTime(data.timer);
         document.getElementById('shuffle-bar').style.width = (data.shuffle / 10) * 100 + "%";
 
-        // 4. 단어 카드 소유권
-        const grid = document.getElementById('card-grid');
-        if(grid.childElementCount === 0) {
-            grid.innerHTML = data.words.map(w => `<div class="card" id="card-${w}">${w}</div>`).join('');
+        // 4. 단어 카드 (100개 그리드)
+        const board = document.getElementById('game-board');
+        if(board.childElementCount === 0) {
+            board.innerHTML = data.words.map(w => `<div class="card" id="card-${w}">${w}</div>`).join('');
         }
         
-        const myRes = [0,0,0,0,0];
+        const myCounts = [0,0,0,0,0];
         Object.entries(data.cards || {}).forEach(([word, team]) => {
             const el = document.getElementById(`card-${word}`);
             if(el) el.className = `card ${team}`;
             if(team === this.team) {
-                const idx = this.getSectorIdx(word);
-                if(idx !== -1) myRes[idx]++;
+                const sIdx = this.getSectorIdx(word);
+                if(sIdx !== -1) myCounts[sIdx]++;
             }
         });
 
-        // 5. 영토 발전 상태 시각화
+        // 5. 영토 시각화 (아이콘 단계별 변화)
         CONFIG.sectors.forEach((_, i) => {
-            const rLv = data.levels.red[i], bLv = data.levels.blue[i], myLv = data.levels[this.team][i];
+            const rL = data.levels.red[i], bL = data.levels.blue[i], myL = data.levels[this.team][i];
             const sectorEl = document.getElementById(`sector-${i}`);
             
-            // 선진국 점령 시 시각 효과
-            if(rLv === 4) sectorEl.className = "sector-card cap-red";
-            else if(bLv === 4) sectorEl.className = "sector-card cap-blue";
+            // 선진국 점령 시
+            if(rL === 4) sectorEl.className = "sector-card won-red";
+            else if(bL === 4) sectorEl.className = "sector-card won-blue";
             else sectorEl.className = "sector-card";
 
-            document.getElementById(`lvl-${i}`).innerText = CONFIG.levels[Math.max(rLv, bLv)];
-            document.getElementById(`prog-${i}`).innerText = `${myRes[i]} / 5 (내 단계: ${CONFIG.levels[myLv]})`;
+            const maxL = Math.max(rL, bL);
+            document.getElementById(`icon-${i}`).className = `fas ${CONFIG.icons[maxL]} step-icon`;
+            document.getElementById(`step-name-${i}`).innerText = CONFIG.levels[maxL];
+            document.getElementById(`prog-${i}`).innerText = `${myCounts[i]} / 5 (LV.${myL})`;
             
-            // 업그레이드 버튼 활성화
             const upBtn = document.getElementById(`up-btn-${i}`);
-            const isFinished = (rLv === 4 || bLv === 4);
-            upBtn.style.display = (myRes[i] >= 5 && myLv < 4 && !isFinished) ? 'block' : 'none';
+            upBtn.style.display = (myCounts[i] >= 5 && myL < 4 && rL < 4 && bL < 4) ? 'block' : 'none';
         });
 
-        // 6. 특수 모드
-        document.getElementById('bonus-box').style.display = data.bonus ? 'block' : 'none';
+        // 6. 보너스 및 감시
+        document.getElementById('bonus-msg').style.display = data.bonus ? 'block' : 'none';
         document.getElementById('bonus-word').innerText = data.bonus;
         document.getElementById('surveillance').style.display = data.surveillance ? 'flex' : 'none';
 
-        // 7. 결과 분석 창
+        // 7. 결과 화면 데이터
         if(data.state === 'FINISHED') {
-            document.getElementById('result-stats').innerHTML = ['red','blue'].map(t => `
-                <div style="color:var(--${t}); border:2px solid; padding:20px;">
-                    <h2 style="margin:0">${t.toUpperCase()} MAFIA</h2><hr>
-                    ${CONFIG.sectors.map((s,i)=>`<div>${s}: ${CONFIG.levels[data.levels[t][i]]}</div>`).join('')}
+            document.getElementById('result-content').innerHTML = ['red','blue'].map(t => `
+                <div style="background:#222; padding:20px; border:4px solid var(--${t}); text-align:center;">
+                    <h2 style="color:var(--${t}); font-size:2rem;">${t.toUpperCase()} MAFIA</h2>
+                    ${CONFIG.sectors.map((s,i)=>`<div>${s}: ${CONFIG.levels[data.levels[t][i]]} <i class="fas ${CONFIG.icons[data.levels[t][i]]}"></i></div>`).join('')}
                 </div>
             `).join('');
         }
 
-        // 8. 마스터 타이머 가동
+        // 8. 마스터 타이머 (m1 모니터만 실행)
         if(this.slot === 'm1' && data.state === 'RUNNING' && !this.active) {
             this.active = true;
-            this.runMasterTimer();
+            this.runMasterLogic();
         }
     },
 
-    runMasterTimer() {
-        let bCount = 20, sCount = 30;
-        const tick = setInterval(() => {
+    runMasterLogic() {
+        let bTick = 20, sTick = 30;
+        const interval = setInterval(() => {
             db.once('value', snap => {
                 const data = snap.val();
-                if(data.state !== 'RUNNING') return clearInterval(tick);
+                if(data.state !== 'RUNNING') return clearInterval(interval);
 
                 let upd = { timer: data.timer - 1, shuffle: data.shuffle - 1 };
-                bCount--; sCount--;
+                bTick--; sTick--;
 
-                // 10초 강제 셔플
                 if(upd.shuffle <= 0) {
                     upd.shuffle = 10;
                     const ts = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
                     upd.teams = { m1:ts[0], m2:ts[1], m3:ts[2], m4:ts[3] };
                 }
-
-                // 20초 보너스
-                if(bCount <= 0) {
-                    bCount = 20;
+                if(bTick <= 0) {
+                    bTick = 20;
                     const pool = Object.values(CONFIG.wordPool).flat();
                     upd.bonus = pool[Math.floor(Math.random()*pool.length)];
                 }
-
-                // 30초 감시
-                if(sCount <= 0) {
-                    sCount = 30;
+                if(sTick <= 0) {
+                    sTick = 30;
                     db.update({ surveillance: true });
                     setTimeout(() => db.update({ surveillance: false }), 2000);
                 }
-
                 if(upd.timer <= 0) upd.state = 'FINISHED';
                 db.update(upd);
             });
@@ -249,8 +249,10 @@ const GAME = {
     },
 
     requestStart() {
-        db.update({ state: 'RUNNING', timer: 120, shuffle: 10, cards: {}, bonus: "", surveillance: false });
+        db.update({ state: 'RUNNING', timer: 120, shuffle: 10, bonus: "", surveillance: false });
     },
+
+    closeResult() { document.getElementById('result-screen').style.display = 'none'; },
 
     bindEvents() {
         const inp = document.getElementById('word-input');
@@ -259,15 +261,15 @@ const GAME = {
                 const val = inp.value.trim();
                 db.once('value', snap => {
                     const data = snap.val();
-                    if(data.surveillance) { // 감시 패널티
+                    if(data.surveillance) {
                         const mine = Object.keys(data.cards||{}).filter(w => data.cards[w] === this.team);
                         if(mine.length > 0) db.child('cards').child(mine[0]).remove();
-                    } else if(val === data.bonus) { // 보너스
+                    } else if(val === data.bonus) {
                         const enemy = this.team === 'red' ? 'blue' : 'red';
                         const eCards = Object.keys(data.cards||{}).filter(w => data.cards[w] === enemy);
                         eCards.slice(0, 5).forEach(w => db.child('cards').child(w).set(this.team));
                         db.update({ bonus: "" });
-                    } else if(data.words.includes(val)) { // 일반
+                    } else if(data.words.includes(val)) {
                         db.child('cards').child(val).set(this.team);
                     }
                 });
