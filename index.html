@@ -2,157 +2,168 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>위치 교대 타자 대결</title>
+    <title>타자 전략 시뮬레이션: 영토 전쟁</title>
     <style>
-        body { background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; font-family: 'Malgun Gothic', sans-serif; margin: 0; overflow: hidden; height: 100vh; justify-content: center; }
+        body { background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; font-family: 'Malgun Gothic', sans-serif; margin: 0; }
         
-        /* 전체 레이아웃 (좌우 반전을 위해 flex-direction 사용) */
-        #main-wrapper { display: flex; gap: 40px; align-items: center; transition: all 0.5s ease; padding: 40px; border-radius: 20px; }
-        
-        /* 입력창 영역 */
-        .player-zone { display: flex; flex-direction: column; align-items: center; width: 250px; padding: 30px; border-radius: 20px; transition: all 0.5s ease; }
-        .p1-zone { background: rgba(52, 152, 219, 0.15); border: 3px solid #3498db; box-shadow: 0 0 20px rgba(52, 152, 219, 0.3); }
-        .p2-zone { background: rgba(231, 76, 60, 0.15); border: 3px solid #e74c3c; box-shadow: 0 0 20px rgba(231, 76, 60, 0.3); }
+        /* 상단 상태바 */
+        .status-bar { display: flex; gap: 50px; background: #333; padding: 20px; width: 100%; justify-content: center; border-bottom: 4px solid #444; }
+        .res-box { text-align: center; padding: 10px 30px; border-radius: 10px; }
+        .p1-res { background: #2980b9; }
+        .p2-res { background: #c0392b; }
+        .res-val { font-size: 2rem; font-weight: bold; }
 
-        .score { font-size: 4rem; font-weight: bold; margin: 15px 0; }
-        .player-label { font-size: 1.5rem; font-weight: bold; margin-bottom: 10px; }
-        input { width: 100%; padding: 15px; font-size: 1.3rem; border-radius: 10px; border: none; outline: none; text-align: center; background: #fff; }
+        /* 메인 레이아웃 */
+        #main-wrapper { display: flex; gap: 30px; align-items: center; margin-top: 30px; transition: all 0.5s ease; }
         
-        /* 4x4 보드 */
-        .board { 
-            display: grid; 
-            grid-template-columns: repeat(4, 140px); 
-            grid-template-rows: repeat(4, 100px); 
-            gap: 15px; 
-            background: #333; 
-            padding: 20px; 
-            border-radius: 15px;
-            box-shadow: 0 0 40px rgba(0,0,0,0.7);
-        }
+        .player-zone { width: 220px; padding: 20px; border-radius: 15px; text-align: center; }
+        .p1-zone { border: 3px solid #3498db; }
+        .p2-zone { border: 3px solid #e74c3c; }
+        input { width: 100%; padding: 12px; font-size: 1.2rem; border-radius: 8px; border: none; margin-top: 10px; text-align: center; }
 
+        /* 전략 보드 */
+        .board { display: grid; grid-template-columns: repeat(4, 150px); grid-template-rows: repeat(4, 110px); gap: 10px; }
+        
         .cell {
-            background: #f0f0f0; color: #222;
-            display: flex; align-items: center; justify-content: center;
-            border-radius: 10px; font-weight: bold; font-size: 1.4rem;
-            transition: transform 0.2s, background 0.3s;
-            border-bottom: 6px solid #bbb;
+            background: #2c3e50; border-radius: 8px; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; position: relative;
+            transition: all 0.3s; border-bottom: 5px solid #1a252f;
         }
 
-        .cell.p1-owned { background: #3498db; color: white; border-bottom: 6px solid #2980b9; transform: scale(1.03); }
-        .cell.p2-owned { background: #e74c3c; color: white; border-bottom: 6px solid #c0392b; transform: scale(1.03); }
+        /* 영토별 상태 표시 */
+        .owner-p1 { background: #3498db !important; border-bottom-color: #2980b9; }
+        .owner-p2 { background: #e74c3c !important; border-bottom-color: #c0392b; }
+        
+        .level-badge { position: absolute; top: 5px; right: 8px; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 10px; font-size: 0.8rem; }
+        .word-display { font-size: 1.3rem; font-weight: bold; margin-top: 5px; }
+        .income-display { font-size: 0.8rem; opacity: 0.8; }
 
-        /* 타이머 디자인 */
-        #timer-container { margin-bottom: 20px; text-align: center; }
-        #timer-bar { width: 300px; height: 10px; background: #444; border-radius: 5px; margin-top: 10px; position: relative; overflow: hidden; }
-        #timer-fill { width: 100%; height: 100%; background: #f1c40f; transition: width 0.1s linear; }
+        /* 위치 교체 경고 */
+        #swap-alert { color: #f1c40f; font-weight: bold; height: 30px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <div id="timer-container">
-        <div style="font-size: 1.2rem; color: #f1c40f;">⚠️ <span id="time-msg">10</span>초 후 위치가 바뀝니다! ⚠️</div>
-        <div id="timer-bar"><div id="timer-fill"></div></div>
+    <div class="status-bar">
+        <div class="res-box p1-res">
+            <div>Blue 자금 (P1)</div>
+            <div id="p1-money" class="res-val">0</div>
+        </div>
+        <div style="text-align: center;">
+            <h2>TERRITORY WAR</h2>
+            <div id="swap-alert">위치 교대까지 10초</div>
+        </div>
+        <div class="res-box p2-res">
+            <div>Red 자금 (P2)</div>
+            <div id="p2-money" class="res-val">0</div>
+        </div>
     </div>
-    
+
     <div id="main-wrapper">
         <div id="p1-area" class="player-zone p1-zone">
-            <div class="player-label">PLAYER 1 (Blue)</div>
-            <div class="score" id="p1-score">0</div>
-            <input type="text" id="p1-input" placeholder="입력!" autofocus>
+            <h3>P1 입력</h3>
+            <input type="text" id="p1-input" placeholder="단어 입력" autofocus>
+            <p style="font-size: 0.8rem; margin-top: 10px;">내 땅 입력 시 LV UP!<br>상대 땅 입력 시 약탈!</p>
         </div>
 
         <div class="board" id="board"></div>
 
         <div id="p2-area" class="player-zone p2-zone">
-            <div class="player-label">PLAYER 2 (Red)</div>
-            <div class="score" id="p2-score">0</div>
-            <input type="text" id="p2-input" placeholder="입력!">
+            <h3>P2 입력</h3>
+            <input type="text" id="p2-input" placeholder="단어 입력">
+            <p style="font-size: 0.8rem; margin-top: 10px;">상대 모니터를 확인하세요!</p>
         </div>
     </div>
 
     <script>
-        const words = ["사과", "바나나", "포도", "딸기", "수박", "오렌지", "망고", "키위", "노트북", "마우스", "키보드", "모니터", "책상", "의자", "거울", "시계", "안경", "지갑", "우산", "신발", "지우개", "연필", "학교", "바다"];
+        const words = ["벽돌", "나무", "철광", "밀밭", "양모", "금광", "항구", "마을", "성곽", "시장", "도로", "요새", "사원", "농장", "숲속", "광산"];
         let boardData = [];
+        let p1Money = 0;
+        let p2Money = 0;
         let timeLeft = 10;
         let isSwapped = false;
 
-        const mainWrapper = document.getElementById('main-wrapper');
-        const boardEl = document.getElementById('board');
-        const timerFill = document.getElementById('timer-fill');
-        const timeMsg = document.getElementById('time-msg');
-
         function initGame() {
-            boardData = [];
-            let shuffleWords = [...words].sort(() => Math.random() - 0.5);
-            for (let i = 0; i < 16; i++) {
-                boardData.push({ word: shuffleWords[i], owner: null });
-            }
+            boardData = words.map(w => ({
+                word: w,
+                owner: null,
+                level: 1
+            }));
             renderBoard();
-            startRotationTimer();
+            setInterval(produceResources, 2000); // 2초마다 자원 생산
+            setInterval(updateTimer, 1000);     // 1초마다 타이머
         }
 
         function renderBoard() {
+            const boardEl = document.getElementById('board');
             boardEl.innerHTML = '';
-            let s1 = 0, s2 = 0;
             boardData.forEach((data) => {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
-                if (data.owner === 'p1') { cell.classList.add('p1-owned'); s1++; }
-                else if (data.owner === 'p2') { cell.classList.add('p2-owned'); s2++; }
-                cell.innerText = data.word;
+                if (data.owner === 'p1') cell.classList.add('owner-p1');
+                if (data.owner === 'p2') cell.classList.add('owner-p2');
+
+                cell.innerHTML = `
+                    <span class="level-badge">LV.${data.level}</span>
+                    <span class="word-display">${data.word}</span>
+                    <span class="income-display">+$${data.level * 10}</span>
+                `;
                 boardEl.appendChild(cell);
             });
-            document.getElementById('p1-score').innerText = s1;
-            document.getElementById('p2-score').innerText = s2;
-
-            if (s1 + s2 === 16) {
-                const winner = s1 > s2 ? "1P(Blue)" : (s2 > s1 ? "2P(Red)" : "무승부");
-                alert(`게임 종료! ${winner} 승리!`);
-                location.reload();
-            }
+            document.getElementById('p1-money').innerText = p1Money;
+            document.getElementById('p2-money').innerText = p2Money;
         }
 
-        // 입력 처리
         function handleInput(e, player) {
             if (e.key === 'Enter') {
                 const val = e.target.value.trim();
-                const target = boardData.find(d => d.word === val && d.owner !== player);
+                const target = boardData.find(d => d.word === val);
+                
                 if (target) {
-                    target.owner = player;
+                    if (target.owner === player) {
+                        // 1. 투자: 내 땅이면 레벨업
+                        target.level++;
+                    } else if (target.owner === null) {
+                        // 2. 점령: 빈 땅이면 내 소유로
+                        target.owner = player;
+                    } else {
+                        // 3. 약탈: 상대 땅이면 자원 뺏기 및 소유권 이전
+                        if (player === 'p1') {
+                            p1Money += (target.level * 20);
+                            p2Money = Math.max(0, p2Money - (target.level * 20));
+                        } else {
+                            p2Money += (target.level * 20);
+                            p1Money = Math.max(0, p1Money - (target.level * 20));
+                        }
+                        target.owner = player;
+                        target.level = 1; // 뺏으면 레벨 초기화
+                    }
                     renderBoard();
                 }
                 e.target.value = '';
             }
         }
 
+        function produceResources() {
+            boardData.forEach(d => {
+                if (d.owner === 'p1') p1Money += (d.level * 5);
+                if (d.owner === 'p2') p2Money += (d.level * 5);
+            });
+            renderBoard();
+        }
+
+        function updateTimer() {
+            timeLeft--;
+            document.getElementById('swap-alert').innerText = `위치 교대까지 ${timeLeft}초`;
+            if (timeLeft <= 0) {
+                isSwapped = !isSwapped;
+                document.getElementById('main-wrapper').style.flexDirection = isSwapped ? "row-reverse" : "row";
+                timeLeft = 10;
+            }
+        }
+
         document.getElementById('p1-input').addEventListener('keypress', (e) => handleInput(e, 'p1'));
         document.getElementById('p2-input').addEventListener('keypress', (e) => handleInput(e, 'p2'));
-
-        // 위치 변경 타이머 로직
-        function startRotationTimer() {
-            setInterval(() => {
-                timeLeft -= 0.1;
-                if (timeLeft <= 0) {
-                    swapPlayers();
-                    timeLeft = 10;
-                }
-                timerFill.style.width = (timeLeft / 10) * 100 + "%";
-                timeMsg.innerText = Math.ceil(timeLeft);
-            }, 100);
-        }
-
-        function swapPlayers() {
-            isSwapped = !isSwapped;
-            // flex-direction을 이용해 좌우 위치를 통째로 바꿈
-            mainWrapper.style.flexDirection = isSwapped ? "row-reverse" : "row";
-            
-            // 시각적 피드백: 바뀌는 순간 강조
-            mainWrapper.style.background = "rgba(255,255,255,0.1)";
-            setTimeout(() => { mainWrapper.style.background = "transparent"; }, 300);
-            
-            // 위치가 바뀌면 현재 포커스된 입력창 유지
-            if(document.activeElement.tagName === 'INPUT') document.activeElement.focus();
-        }
 
         initGame();
     </script>
