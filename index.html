@@ -2,170 +2,173 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>타자 전략 시뮬레이션: 영토 전쟁</title>
+    <title>활동형 카탄 영토전쟁</title>
     <style>
-        body { background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; font-family: 'Malgun Gothic', sans-serif; margin: 0; }
+        :root { --p1: #3498db; --p2: #e74c3c; --bg: #1a1a1a; }
+        body { background: var(--bg); color: white; font-family: 'Malgun Gothic', sans-serif; margin: 0; overflow: hidden; }
         
-        /* 상단 상태바 */
-        .status-bar { display: flex; gap: 50px; background: #333; padding: 20px; width: 100%; justify-content: center; border-bottom: 4px solid #444; }
-        .res-box { text-align: center; padding: 10px 30px; border-radius: 10px; }
-        .p1-res { background: #2980b9; }
-        .p2-res { background: #c0392b; }
-        .res-val { font-size: 2rem; font-weight: bold; }
-
-        /* 메인 레이아웃 */
-        #main-wrapper { display: flex; gap: 30px; align-items: center; margin-top: 30px; transition: all 0.5s ease; }
+        /* 4개 모니터 레이아웃 */
+        .screen-container { display: grid; grid-template-columns: repeat(4, 25vw); height: 100vh; }
+        .monitor { border: 4px solid #333; display: flex; flex-direction: column; align-items: center; padding: 20px; box-sizing: border-box; position: relative; }
         
-        .player-zone { width: 220px; padding: 20px; border-radius: 15px; text-align: center; }
-        .p1-zone { border: 3px solid #3498db; }
-        .p2-zone { border: 3px solid #e74c3c; }
-        input { width: 100%; padding: 12px; font-size: 1.2rem; border-radius: 8px; border: none; margin-top: 10px; text-align: center; }
+        /* 모니터별 테마 */
+        #m1 { border-color: #f1c40f; } /* 본부 */
+        #m2 { border-color: #2ecc71; } /* 나무/벽돌 */
+        #m3 { border-color: #e67e22; } /* 밀/철 */
+        #m4 { border-color: #9b59b6; } /* 건설/약탈 */
 
-        /* 전략 보드 */
-        .board { display: grid; grid-template-columns: repeat(4, 150px); grid-template-rows: repeat(4, 110px); gap: 10px; }
-        
-        .cell {
-            background: #2c3e50; border-radius: 8px; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; position: relative;
-            transition: all 0.3s; border-bottom: 5px solid #1a252f;
-        }
+        /* 판 뒤집기 그리드 (4x4) */
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; width: 100%; margin-top: 15px; }
+        .cell { height: 60px; background: #333; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; border-radius: 4px; transition: 0.3s; font-weight: bold; }
+        .p1-cell { background: var(--p1); color: white; box-shadow: inset 0 0 10px #000; }
+        .p2-cell { background: var(--p2); color: white; box-shadow: inset 0 0 10px #000; }
 
-        /* 영토별 상태 표시 */
-        .owner-p1 { background: #3498db !important; border-bottom-color: #2980b9; }
-        .owner-p2 { background: #e74c3c !important; border-bottom-color: #c0392b; }
-        
-        .level-badge { position: absolute; top: 5px; right: 8px; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 10px; font-size: 0.8rem; }
-        .word-display { font-size: 1.3rem; font-weight: bold; margin-top: 5px; }
-        .income-display { font-size: 0.8rem; opacity: 0.8; }
+        /* 상태창 */
+        .stat-card { width: 90%; background: #222; padding: 10px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid; }
+        .p1-stat { border-color: var(--p1); }
+        .p2-stat { border-color: var(--p2); }
 
-        /* 위치 교체 경고 */
-        #swap-alert { color: #f1c40f; font-weight: bold; height: 30px; margin-top: 10px; }
+        input { width: 90%; padding: 12px; font-size: 1.2rem; border-radius: 5px; border: 2px solid #555; background: #000; color: #fff; text-align: center; }
+        .res-icon { font-size: 1.2rem; margin-right: 5px; }
+        .vp { font-size: 2.5rem; font-weight: bold; color: #f1c40f; }
     </style>
 </head>
 <body>
 
-    <div class="status-bar">
-        <div class="res-box p1-res">
-            <div>Blue 자금 (P1)</div>
-            <div id="p1-money" class="res-val">0</div>
+<div class="screen-container">
+    <div class="monitor" id="m1">
+        <h2>📊 CENTRAL HQ</h2>
+        <div class="stat-card p1-stat">
+            <b>BLUE (P1)</b><br>
+            <span id="p1-res">🌲0 🧱0 🌾0 ⛏️0</span>
+            <div class="vp">VP: <span id="p1-vp">0</span></div>
         </div>
-        <div style="text-align: center;">
-            <h2>TERRITORY WAR</h2>
-            <div id="swap-alert">위치 교대까지 10초</div>
+        <div class="stat-card p2-stat">
+            <b>RED (P2)</b><br>
+            <span id="p2-res">🌲0 🧱0 🌾0 ⛏️0</span>
+            <div class="vp">VP: <span id="p2-vp">0</span></div>
         </div>
-        <div class="res-box p2-res">
-            <div>Red 자금 (P2)</div>
-            <div id="p2-money" class="res-val">0</div>
-        </div>
+        <div id="game-log" style="font-size:0.8rem; color:#888; margin-top:10px;"></div>
     </div>
 
-    <div id="main-wrapper">
-        <div id="p1-area" class="player-zone p1-zone">
-            <h3>P1 입력</h3>
-            <input type="text" id="p1-input" placeholder="단어 입력" autofocus>
-            <p style="font-size: 0.8rem; margin-top: 10px;">내 땅 입력 시 LV UP!<br>상대 땅 입력 시 약탈!</p>
-        </div>
-
-        <div class="board" id="board"></div>
-
-        <div id="p2-area" class="player-zone p2-zone">
-            <h3>P2 입력</h3>
-            <input type="text" id="p2-input" placeholder="단어 입력">
-            <p style="font-size: 0.8rem; margin-top: 10px;">상대 모니터를 확인하세요!</p>
-        </div>
+    <div class="monitor" id="m2">
+        <h2>🌲 WOOD & BRICK 🧱</h2>
+        <input type="text" id="m2-input" placeholder="단어 치고 점령!">
+        <div class="grid" id="grid-m2"></div>
     </div>
 
-    <script>
-        const words = ["벽돌", "나무", "철광", "밀밭", "양모", "금광", "항구", "마을", "성곽", "시장", "도로", "요새", "사원", "농장", "숲속", "광산"];
-        let boardData = [];
-        let p1Money = 0;
-        let p2Money = 0;
-        let timeLeft = 10;
-        let isSwapped = false;
+    <div class="monitor" id="m3">
+        <h2>🌾 WHEAT & IRON ⛏️</h2>
+        <input type="text" id="m3-input" placeholder="단어 치고 점령!">
+        <div class="grid" id="grid-m3"></div>
+    </div>
 
-        function initGame() {
-            boardData = words.map(w => ({
-                word: w,
-                owner: null,
-                level: 1
-            }));
-            renderBoard();
-            setInterval(produceResources, 2000); // 2초마다 자원 생산
-            setInterval(updateTimer, 1000);     // 1초마다 타이머
-        }
+    <div class="monitor" id="m4">
+        <h2>🏰 FORTRESS</h2>
+        <p style="font-size: 0.8rem;">[마을]🌲1🧱1 / [도시]🌾2⛏️1 / [강탈]자금5</p>
+        <input type="text" id="m4-input" placeholder="명령어 입력">
+        <div class="grid" id="grid-m4"></div>
+    </div>
+</div>
 
-        function renderBoard() {
-            const boardEl = document.getElementById('board');
-            boardEl.innerHTML = '';
-            boardData.forEach((data) => {
+<script>
+    const P1 = 'p1', P2 = 'p2';
+    const state = {
+        p1: { res: { wood: 0, brick: 0, wheat: 0, iron: 0 }, vp: 0 },
+        p2: { res: { wood: 0, brick: 0, wheat: 0, iron: 0 }, vp: 0 }
+    };
+
+    const wordList = ["바다", "하늘", "구름", "태양", "달빛", "별빛", "바람", "안개", "풀잎", "나무", "줄기", "뿌리", "모래", "자갈", "바위", "대지"];
+    const grids = { m2: [], m3: [], m4: [] };
+
+    // 초기화
+    function init() {
+        ['m2', 'm3', 'm4'].forEach(mId => {
+            const gridEl = document.getElementById(`grid-${mId}`);
+            for(let i=0; i<16; i++) {
+                const item = { word: wordList[i], owner: null };
+                grids[mId].push(item);
                 const cell = document.createElement('div');
                 cell.className = 'cell';
-                if (data.owner === 'p1') cell.classList.add('owner-p1');
-                if (data.owner === 'p2') cell.classList.add('owner-p2');
+                cell.id = `${mId}-cell-${i}`;
+                cell.innerText = item.word;
+                gridEl.appendChild(cell);
+            }
+        });
+        setInterval(produce, 3000); // 3초마다 자원 생산
+        render();
+    }
 
-                cell.innerHTML = `
-                    <span class="level-badge">LV.${data.level}</span>
-                    <span class="word-display">${data.word}</span>
-                    <span class="income-display">+$${data.level * 10}</span>
-                `;
-                boardEl.appendChild(cell);
+    function render() {
+        // 자원 표시 업데이트
+        document.getElementById('p1-res').innerText = `🌲${state.p1.res.wood} 🧱${state.p1.res.brick} 🌾${state.p1.res.wheat} ⛏️${state.p1.res.iron}`;
+        document.getElementById('p2-res').innerText = `🌲${state.p2.res.wood} 🧱${state.p2.res.brick} 🌾${state.p2.res.wheat} ⛏️${state.p2.res.iron}`;
+        document.getElementById('p1-vp').innerText = state.p1.vp;
+        document.getElementById('p2-vp').innerText = state.p2.vp;
+
+        // 그리드 색상 업데이트
+        ['m2', 'm3', 'm4'].forEach(mId => {
+            grids[mId].forEach((item, i) => {
+                const cell = document.getElementById(`${mId}-cell-${i}`);
+                cell.className = 'cell' + (item.owner ? ` ${item.owner}-cell` : '');
             });
-            document.getElementById('p1-money').innerText = p1Money;
-            document.getElementById('p2-money').innerText = p2Money;
-        }
+        });
+    }
 
-        function handleInput(e, player) {
-            if (e.key === 'Enter') {
+    // 자원 생산 로직 (점령한 땅만큼 생산)
+    function produce() {
+        grids.m2.forEach(c => {
+            if(c.owner) {
+                if(Math.random() > 0.5) state[c.owner].res.wood++;
+                else state[c.owner].res.brick++;
+            }
+        });
+        grids.m3.forEach(c => {
+            if(c.owner) {
+                if(Math.random() > 0.5) state[c.owner].res.wheat++;
+                else state[c.owner].res.iron++;
+            }
+        });
+        render();
+    }
+
+    // 입력 처리
+    function handle(inputEl, monitorId) {
+        inputEl.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') {
                 const val = e.target.value.trim();
-                const target = boardData.find(d => d.word === val);
-                
-                if (target) {
-                    if (target.owner === player) {
-                        // 1. 투자: 내 땅이면 레벨업
-                        target.level++;
-                    } else if (target.owner === null) {
-                        // 2. 점령: 빈 땅이면 내 소유로
-                        target.owner = player;
-                    } else {
-                        // 3. 약탈: 상대 땅이면 자원 뺏기 및 소유권 이전
-                        if (player === 'p1') {
-                            p1Money += (target.level * 20);
-                            p2Money = Math.max(0, p2Money - (target.level * 20));
-                        } else {
-                            p2Money += (target.level * 20);
-                            p1Money = Math.max(0, p1Money - (target.level * 20));
-                        }
-                        target.owner = player;
-                        target.level = 1; // 뺏으면 레벨 초기화
+                const player = val.endsWith('1') ? P1 : (val.endsWith('2') ? P2 : null);
+                const word = val.replace(/[12]/g, '');
+
+                if(!player) { alert("끝에 1 또는 2를 붙이세요! (예: 바다1)"); return; }
+
+                // 판 뒤집기 로직 (m2, m3, m4 공통)
+                const target = grids[monitorId].find(item => item.word === word);
+                if(target) {
+                    target.owner = player;
+                    render();
+                }
+
+                // 모니터 4 특수 건설 로직
+                if(monitorId === 'm4') {
+                    if(word === "마을" && state[player].res.wood >= 1 && state[player].res.brick >= 1) {
+                        state[player].res.wood--; state[player].res.brick--; state[player].vp++;
                     }
-                    renderBoard();
+                    if(word === "도시" && state[player].res.wheat >= 2 && state[player].res.iron >= 1) {
+                        state[player].res.wheat -= 2; state[player].res.iron--; state[player].vp += 3;
+                    }
+                    render();
                 }
                 e.target.value = '';
             }
-        }
+        });
+    }
 
-        function produceResources() {
-            boardData.forEach(d => {
-                if (d.owner === 'p1') p1Money += (d.level * 5);
-                if (d.owner === 'p2') p2Money += (d.level * 5);
-            });
-            renderBoard();
-        }
+    handle(document.getElementById('m2-input'), 'm2');
+    handle(document.getElementById('m3-input'), 'm3');
+    handle(document.getElementById('m4-input'), 'm4');
 
-        function updateTimer() {
-            timeLeft--;
-            document.getElementById('swap-alert').innerText = `위치 교대까지 ${timeLeft}초`;
-            if (timeLeft <= 0) {
-                isSwapped = !isSwapped;
-                document.getElementById('main-wrapper').style.flexDirection = isSwapped ? "row-reverse" : "row";
-                timeLeft = 10;
-            }
-        }
-
-        document.getElementById('p1-input').addEventListener('keypress', (e) => handleInput(e, 'p1'));
-        document.getElementById('p2-input').addEventListener('keypress', (e) => handleInput(e, 'p2'));
-
-        initGame();
-    </script>
+    init();
+</script>
 </body>
 </html>
