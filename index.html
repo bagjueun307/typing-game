@@ -1,68 +1,252 @@
-// [수정] 타이머 함수: 보너스 생성 및 감시 모드 제어 포함
-function startTimer() {
-    let time = 120, shuffle = 10, bonusTick = 20;
-    if(timerIntr) clearInterval(timerIntr);
-
-    timerIntr = setInterval(() => {
-        time--; shuffle--; bonusTick--;
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>NATION BUILDER v20.7 - Tactical Command</title>
+    <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --dark: #050505; --red: #ff1a1a; --blue: #1a75ff; --yellow: #ffea00; --neon: #00ff41; --glass: rgba(255,255,255,0.08); }
+        body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', monospace; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
-        // UI 업데이트
-        document.getElementById('timer-disp').innerText = Math.floor(time/60) + ":" + (time%60).toString().padStart(2,'0');
-        document.getElementById('shuffle-bar').style.width = (shuffle/10)*100 + "%";
+        /* 상단 대시보드 */
+        #top-bar { height: 110px; background: #000; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; border-bottom: 3px solid #333; }
+        #timer-disp { font-size: 3.2rem; color: var(--yellow); min-width: 150px; text-shadow: 0 0 15px var(--yellow); }
+        
+        .territory-status { display: flex; gap: 25px; flex: 1; justify-content: center; }
+        .icon-box { display: flex; flex-direction: column; align-items: center; min-width: 100px; padding: 10px; background: #0a0a0a; border: 1px solid #333; border-radius: 5px; }
+        .icon-box i { font-size: 2rem; margin-bottom: 5px; }
+        .rank-tag { font-size: 0.9rem; color: var(--neon); margin-top: 4px; }
 
-        if(myId === 1) { // 1번 모니터가 마스터 역할 수행
-            // 10초마다 팀 셔플
-            if(shuffle <= 0) {
-                const ts = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
-                db.update({ teams: { 1:ts[0], 2:ts[1], 3:ts[2], 4:ts[3] } });
-                shuffle = 10;
-            }
-            // 20초마다 보너스 단어 생성
-            if(bonusTick <= 0) {
-                const randomWord = currentWords[Math.floor(Math.random()*currentWords.length)];
-                db.update({ bonus: randomWord });
-                bonusTick = 20;
-                // 5초 뒤 보너스 만료
-                setTimeout(() => db.update({ bonus: "" }), 5000);
-            }
-            // 30초마다 감시 모드 신호 (DB에 기록하여 모든 모니터 동기화)
-            if(time > 0 && time % 30 === 0) {
-                db.update({ watching: true });
-                setTimeout(() => db.update({ watching: false }), 2000);
-            }
+        #shuffle-container { height: 8px; background: #111; width: 100%; }
+        #shuffle-bar { height: 100%; background: var(--yellow); width: 100%; transition: width 0.1s linear; }
+
+        /* 감시 모드 레이어 */
+        #surveillance-layer { position: fixed; inset: 0; border: 40px solid var(--red); background: rgba(255, 0, 0, 0.2); display: none; z-index: 9999; pointer-events: none; animation: flash 0.5s infinite; }
+        @keyframes flash { 0% { opacity: 0.8; } 50% { opacity: 0.3; } 100% { opacity: 0.8; } }
+
+        /* 게임 보드 및 모니터 */
+        #room-view { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 8px; padding: 8px; background: #111; }
+        .monitor { border: 4px solid #333; position: relative; display: flex; flex-direction: column; background: #000; transition: 0.3s; overflow: hidden; }
+        .monitor.team-red { background-color: rgba(255, 26, 26, 0.15); border-color: var(--red); }
+        .monitor.team-blue { background-color: rgba(26, 117, 255, 0.15); border-color: var(--blue); }
+        .monitor.focused { position: fixed !important; inset: 125px 8px 8px 8px; z-index: 5000; }
+
+        .gate { position: absolute; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 6000; }
+        .radar-display { position: absolute; top: 70px; right: 20px; width: 220px; background: rgba(0, 0, 0, 0.8); border: 1px solid var(--neon); color: var(--neon); padding: 12px; font-size: 0.85rem; z-index: 5500; display: none; }
+        .monitor.focused .radar-display { display: block; }
+
+        .up-btn { background: var(--neon); color: #000; border: none; font-family: 'DungGeunMo'; font-weight: bold; cursor: pointer; padding: 3px 8px; border-radius: 3px; display: none; }
+        
+        #bonus-alert { position: absolute; top: 18%; left: 50%; transform: translateX(-50%); background: var(--yellow); color: #000; padding: 15px 50px; z-index: 7000; display: none; font-weight: bold; font-size: 1.5rem; border-radius: 5px; box-shadow: 0 0 20px var(--yellow); }
+
+        .board { flex: 1; display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; padding: 5px; align-content: center; }
+        .card { background: var(--glass); font-size: 0.75rem; display: flex; align-items: center; justify-content: center; border: 1px solid #222; height: 38px; color: #666; }
+        .card.owned-red { background: var(--red) !important; color: white; border: none; font-weight: bold; }
+        .card.owned-blue { background: var(--blue) !important; color: white; border: none; font-weight: bold; }
+
+        .input-wrap { height: 90px; display: flex; border-top: 2px solid #333; background: #000; }
+        .input-box { flex: 1; background: transparent; border: none; font-size: 3.5rem; text-align: center; color: #fff; font-family: 'DungGeunMo'; outline: none; }
+
+        /* 결과 화면 */
+        #result-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        .analysis-box { display: flex; gap: 40px; margin-top: 20px; background: #0a0a0a; padding: 20px; border: 1px solid #444; width: 80%; }
+        .team-report { flex: 1; font-size: 1rem; line-height: 1.8; }
+    </style>
+</head>
+<body>
+
+<div id="surveillance-layer"></div>
+<div id="top-bar">
+    <div id="timer-disp">02:00</div>
+    <div class="territory-status">
+        <div class="icon-box"><i class="fas fa-bolt" style="color:var(--yellow)"></i><span>에너지</span><div id="stat-0" class="rank-tag">-</div></div>
+        <div class="icon-box"><i class="fas fa-industry" style="color:#aaa"></i><span>인프라</span><div id="stat-1" class="rank-tag">-</div></div>
+        <div class="icon-box"><i class="fas fa-coins" style="color:#ffd700"></i><span>자본</span><div id="stat-2" class="rank-tag">-</div></div>
+        <div class="icon-box"><i class="fas fa-microchip" style="color:#00ff00"></i><span>기술</span><div id="stat-3" class="rank-tag">-</div></div>
+        <div class="icon-box"><i class="fas fa-palette" style="color:#ff66cc"></i><span>문화</span><div id="stat-4" class="rank-tag">-</div></div>
+    </div>
+</div>
+
+<div id="shuffle-container"><div id="shuffle-bar"></div></div>
+<div id="bonus-alert">보너스 단어 출현: <span id="bonus-word"></span></div>
+
+<div id="room-view">
+    <script>
+        const cityNames = ['에너지','인프라','자본','기술','문화'];
+        const rankLabels = ['공터','마을','도시','개발도상국','선진국'];
+        const rankIcons = ['fa-seedling','fa-home','fa-city','fa-industry','fa-globe'];
+
+        for(let i=1; i<=4; i++) {
+            document.write(`
+                <div class="monitor" id="mon-${i}" onclick="zoomIn(${i})">
+                    <div class="gate" id="gate-${i}">
+                        <button onclick="requestStart(event)" style="padding:25px 50px; font-size:2rem; font-family:'DungGeunMo'; cursor:pointer; background:var(--yellow); border:none;">OPERATION START</button>
+                    </div>
+                    <div class="radar-display" id="radar-${i}"><div id="radar-info-${i}">SCANNING...</div></div>
+                    <div style="display:flex; justify-content:space-around; background:rgba(0,0,0,0.9); padding:10px; border-bottom:1px solid #333;">
+                        ${cityNames.map((c, idx) => `
+                            <div style="display:flex; flex-direction:column; align-items:center;">
+                                <div style="display:flex; align-items:center;">
+                                    <span id="icon-wrap-${i}-${idx}"><i class="fas ${rankIcons[0]}"></i></span>
+                                    <span style="font-size:0.8rem; color:#fff; margin-left:5px;">${c}</span>
+                                    <button id="up-btn-${i}-${idx}" class="up-btn" onclick="upgradeCity(event, ${i}, ${idx})">UP</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="board" id="board-${i}"></div>
+                    <div class="input-wrap"><input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="대기 중..." disabled autocomplete="off"></div>
+                </div>
+            `);
         }
+    </script>
+</div>
 
-        if(time <= 0) { 
-            clearInterval(timerIntr); 
-            if(myId === 1) db.update({ state: 'FINISHED' }); 
+<div id="result-screen">
+    <h1 style="color:var(--yellow); font-size:3rem;">ROUND EVALUATION</h1>
+    <div style="display:flex; align-items:center; width: 90%; justify-content: center;">
+        <div style="width:400px; height:400px;"><canvas id="radarChart"></canvas></div>
+        <div class="analysis-box">
+            <div class="team-report" id="report-red" style="color:var(--red); border-right: 1px solid #333; padding-right: 20px;"></div>
+            <div class="team-report" id="report-blue" style="color:var(--blue); padding-left: 20px;"></div>
+        </div>
+    </div>
+    <button onclick="nextRound()" style="margin-top:20px; padding:15px 60px; background:var(--yellow); cursor:pointer; font-family:'DungGeunMo'; font-size:1.5rem; border:none;">CONTINUE NEXT ROUND</button>
+</div>
+
+<script>
+    // 1. Firebase 초기 설정 (URL 확인 필수)
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v20_7');
+    
+    const wordPool = {
+        '에너지': ['석유','가스','원자력','태양광','풍력','수력','전기','배터리','에너지','화석','연료','탄소','그리드','조력'],
+        '인프라': ['도로','철도','항만','공항','빌딩','터널','수도','하수','교량','주택','철강','물류','운송','건설'],
+        '자본': ['은행','주식','투자','환율','금리','경제','펀드','세금','화폐','자산','보험','증권','신용','금융'],
+        '기술': ['AI','로봇','코딩','보안','양자','반도체','통신','드론','위성','데이터','센서','클라우드','서버','디지털'],
+        '문화': ['영화','음악','예술','축제','전통','관광','게임','웹툰','스포츠','방송','패션','역사','언어','미디어']
+    };
+
+    let myId = 0, active = false, pCards = {}, currentWords = [], timerIntr = null, bonusWord = "";
+    let cityLevels = { red: [0,0,0,0,0], blue: [0,0,0,0,0] };
+    let currentTeams = { 1:'red', 2:'red', 3:'blue', 4:'blue' };
+    let focusedId = null, isWatching = false;
+
+    // 모니터 확대 및 포커스 관리
+    function zoomIn(id) {
+        focusedId = id; myId = id;
+        document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
+        document.getElementById(`mon-${id}`).classList.add('focused');
+        document.getElementById(`in-${id}`).focus();
+        if(!active) {
+            document.querySelectorAll('.gate').forEach(g => g.style.display = 'none');
+            document.getElementById(`gate-${id}`).style.display = 'flex';
         }
-    }, 1000);
-}
+    }
 
-// [수정] 입력 처리: 감시 모드 패널티 로직 추가
-function handleInput(e, id) {
-    if(e.key !== 'Enter') return;
-    const val = e.target.value.trim();
-    const team = currentTeams[id];
+    // 게임 시작 요청 (3, 2, 1 카운트다운은 상위 state로 관리 가능)
+    function requestStart(e) {
+        e.stopPropagation();
+        const allWords = Object.values(wordPool).flat().sort(() => Math.random() - 0.5);
+        db.update({ state: 'RUNNING', words: allWords, cards: {}, watching: false, bonus: "" });
+    }
 
-    // 감시 모드 체크 (DB 필드 'watching' 기준)
-    db.child('watching').once('value', snap => {
-        if(snap.val() === true) {
-            // 패널티: 내 카드 2개 무작위 삭제
-            const myCards = Object.keys(pCards).filter(w => pCards[w] === team);
-            if(myCards.length >= 2) {
-                db.child('cards').child(myCards[0]).remove();
-                db.child('cards').child(myCards[1]).remove();
+    // 업그레이드 로직
+    function upgradeCity(e, monId, cityIdx) {
+        e.stopPropagation();
+        const team = currentTeams[monId];
+        if(cityLevels[team][cityIdx] >= 4) return;
+        const targetWords = wordPool[cityNames[cityIdx]];
+        const myCardsInCat = Object.keys(pCards).filter(w => pCards[w] === team && targetWords.includes(w));
+        
+        if(myCardsInCat.length >= 5) {
+            myCardsInCat.slice(0, 5).forEach(w => db.child('cards').child(w).remove());
+            const newLevels = [...cityLevels[team]];
+            newLevels[cityIdx]++;
+            db.child('levels').child(team).set(newLevels);
+            // 업그레이드 후 즉시 포커스 복구
+            setTimeout(() => document.getElementById(`in-${monId}`).focus(), 10);
+        }
+    }
+
+    // Firebase 실시간 동기화
+    db.on('value', snap => {
+        const d = snap.val(); if(!d) return;
+        pCards = d.cards || {};
+        currentWords = d.words || [];
+        currentTeams = d.teams || currentTeams;
+        cityLevels = d.levels || cityLevels;
+        bonusWord = d.bonus || "";
+        isWatching = d.watching || false;
+        
+        if(d.state === 'RUNNING' && !active) {
+            active = true;
+            document.querySelectorAll('.gate').forEach(g => g.style.display = 'none');
+            document.querySelectorAll('.input-box').forEach(inp => { inp.disabled = false; inp.placeholder = "입력하세요!"; });
+            startTimer();
+        } else if(d.state === 'FINISHED' && active) {
+            active = false;
+            clearInterval(timerIntr);
+            showResult();
+        }
+        render();
+    });
+
+    // 타이머 및 주기적 이벤트 제어 (1번 모니터가 마스터)
+    function startTimer() {
+        let time = 120, shuffle = 10, bonusTick = 20;
+        timerIntr = setInterval(() => {
+            time--; shuffle--; bonusTick--;
+            
+            document.getElementById('timer-disp').innerText = Math.floor(time/60) + ":" + (time%60).toString().padStart(2,'0');
+            document.getElementById('shuffle-bar').style.width = (shuffle/10)*100 + "%";
+
+            if(myId === 1) {
+                // 10초 팀 셔플
+                if(shuffle <= 0) {
+                    const ts = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
+                    db.update({ teams: { 1:ts[0], 2:ts[1], 3:ts[2], 4:ts[3] } });
+                    shuffle = 10;
+                }
+                // 20초 보너스 단어
+                if(bonusTick <= 0) {
+                    const bw = currentWords[Math.floor(Math.random()*currentWords.length)];
+                    db.update({ bonus: bw });
+                    bonusTick = 20;
+                    setTimeout(() => db.update({ bonus: "" }), 5000);
+                }
+                // 30초 감시 모드
+                if(time > 0 && time % 30 === 0) {
+                    db.update({ watching: true });
+                    setTimeout(() => db.update({ watching: false }), 2000);
+                }
+                if(time <= 0) db.update({ state: 'FINISHED' });
             }
-            e.target.value = "PENALTY!!!";
+        }, 1000);
+    }
+
+    // 입력 처리
+    function handleInput(e, id) {
+        if(e.key !== 'Enter') return;
+        const val = e.target.value.trim();
+        const team = currentTeams[id];
+
+        if(isWatching) {
+            const myOwn = Object.keys(pCards).filter(w => pCards[w] === team);
+            if(myOwn.length >= 2) {
+                db.child('cards').child(myOwn[0]).remove();
+                db.child('cards').child(myOwn[1]).remove();
+            }
+            e.target.value = "감시 적발! -2";
             setTimeout(() => e.target.value = "", 500);
             return;
         }
 
-        // 보너스 단어 처리
         if(val === bonusWord && bonusWord !== "") {
-            // 상대팀 카드 5개를 뺏어오는 파괴적인 효과
-            const enemy = (team === 'red' ? 'blue' : 'red');
+            const enemy = team === 'red' ? 'blue' : 'red';
             const enemyCards = Object.keys(pCards).filter(w => pCards[w] === enemy);
             enemyCards.slice(0, 5).forEach(w => db.child('cards').child(w).set(team));
             db.update({ bonus: "" });
@@ -70,5 +254,77 @@ function handleInput(e, id) {
             db.child('cards').child(val).set(team);
         }
         e.target.value = "";
-    });
-}
+    }
+
+    // 렌더링 함수
+    function render() {
+        document.getElementById('surveillance-layer').style.display = isWatching ? 'block' : 'none';
+        document.getElementById('bonus-alert').style.display = bonusWord ? 'block' : 'none';
+        document.getElementById('bonus-word').innerText = bonusWord;
+
+        for(let i=1; i<=4; i++) {
+            const team = currentTeams[i];
+            const mon = document.getElementById(`mon-${i}`);
+            mon.className = `monitor team-${team} ${i===focusedId?'focused':''}`;
+            
+            // 보드 업데이트
+            const b = document.getElementById(`board-${i}`);
+            if(currentWords.length > 0 && b.innerHTML === "") { // 초기 1회 생성
+                b.innerHTML = currentWords.map(w => `<div class="card" id="card-${i}-${w}">${w}</div>`).join('');
+            }
+            // 카드 소유권 표시
+            currentWords.forEach(w => {
+                const cardEl = document.getElementById(`card-${i}-${w}`);
+                if(cardEl) {
+                    cardEl.className = 'card' + (pCards[w] ? ` owned-${pCards[w]}` : '');
+                }
+            });
+
+            // 상단 아이콘 및 업그레이드 버튼
+            cityNames.forEach((_, idx) => {
+                const lv = cityLevels[team][idx];
+                const count = Object.keys(pCards).filter(w => pCards[w] === team && wordPool[cityNames[idx]].includes(w)).length;
+                document.getElementById(`icon-wrap-${i}-${idx}`).innerHTML = `<i class="fas ${rankIcons[lv]}" style="color:${lv>0?'var(--yellow)':'#444'}"></i>`;
+                document.getElementById(`up-btn-${i}-${idx}`).style.display = (count >= 5 && lv < 4) ? 'inline-block' : 'none';
+                
+                // 전역 상태 태그 (가장 높은 팀 기준)
+                const globalLv = Math.max(cityLevels.red[idx], cityLevels.blue[idx]);
+                document.getElementById(`stat-${idx}`).innerText = rankLabels[globalLv];
+            });
+        }
+    }
+
+    function showResult() {
+        document.getElementById('result-screen').style.display = 'flex';
+        const ctx = document.getElementById('radarChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: cityNames,
+                datasets: [
+                    { label: 'RED 마피아', data: cityLevels.red, backgroundColor: 'rgba(255,0,0,0.3)', borderColor: 'red' },
+                    { label: 'BLUE 마피아', data: cityLevels.blue, backgroundColor: 'rgba(0,0,255,0.3)', borderColor: 'blue' }
+                ]
+            },
+            options: { scales: { r: { min:0, max:4, ticks:{display:false}, grid:{color:'#444'} } } }
+        });
+        
+        ['red', 'blue'].forEach(t => {
+            let html = `<h2>${t.toUpperCase()} 세력 보고서</h2>`;
+            cityNames.forEach((name, idx) => {
+                html += `<div>${name}: ${rankLabels[cityLevels[t][idx]]}</div>`;
+            });
+            document.getElementById(`report-${t}`).innerHTML = html;
+        });
+    }
+
+    function nextRound() {
+        db.update({ state: 'READY', cards: {}, bonus: "", watching: false });
+        document.getElementById('result-screen').style.display = 'none';
+    }
+
+    // 마우스 클릭 시 포커스 유지 루프
+    setInterval(() => { if(active && focusedId) document.getElementById(`in-${focusedId}`).focus(); }, 1000);
+</script>
+</body>
+</html>
