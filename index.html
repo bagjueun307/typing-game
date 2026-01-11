@@ -2,166 +2,142 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>심플 카드 뒤집기 게임</title>
+    <title>타자 판 뒤집기 게임</title>
     <style>
-        /* CSS: 디자인 */
-        body {
-            font-family: 'Arial', sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background-color: #f0f2f5;
-            margin-top: 50px;
-        }
-
-        h2 { color: #333; }
-
-        .game-board {
-            display: grid;
-            grid-template-columns: repeat(4, 100px); /* 4열 배치 */
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .card {
-            width: 100px;
-            height: 140px;
-            perspective: 1000px;
-            cursor: pointer;
-        }
-
-        .card-inner {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            transition: transform 0.5s;
-            transform-style: preserve-3d;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        body { background: #333; color: white; display: flex; flex-direction: column; align-items: center; font-family: 'Malgun Gothic', sans-serif; }
+        #game-container { margin-top: 20px; text-align: center; }
+        
+        /* 4x4 판 구조 */
+        .board { 
+            display: grid; 
+            grid-template-columns: repeat(4, 120px); 
+            grid-template-rows: repeat(4, 80px); 
+            gap: 10px; 
+            background: #444; 
+            padding: 15px; 
             border-radius: 10px;
         }
 
-        /* 카드가 뒤집혔을 때 애니메이션 */
-        .card.flipped .card-inner {
-            transform: rotateY(180deg);
-        }
-
-        .card-front, .card-back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
+        .cell {
+            background: #eee;
+            color: #333;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.5rem;
-            border-radius: 10px;
-            border: 2px solid #fff;
-        }
-
-        /* 카드 뒷면 (물음표 표시) */
-        .card-back {
-            background-color: #4A90E2;
-            color: white;
-        }
-
-        /* 카드 앞면 (이모지 표시) */
-        .card-front {
-            background-color: #ffffff;
-            transform: rotateY(180deg);
-        }
-
-        button {
-            margin-top: 30px;
-            padding: 10px 25px;
-            font-size: 1rem;
-            background-color: #333;
-            color: white;
-            border: none;
             border-radius: 5px;
-            cursor: pointer;
-            transition: 0.3s;
+            font-weight: bold;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            border: 4px solid transparent;
         }
 
-        button:hover {
-            background-color: #555;
+        /* 내 판 (파란색) */
+        .cell.player { background: #3498db; color: white; border-color: #2980b9; }
+        /* 상대 판 (빨간색 - 컴퓨터) */
+        .cell.enemy { background: #e74c3c; color: white; border-color: #c0392b; }
+
+        .info { margin: 20px; font-size: 1.5rem; display: flex; gap: 40px; }
+        #input-field { 
+            padding: 10px; width: 300px; font-size: 1.2rem; 
+            border-radius: 5px; border: none; outline: none;
         }
+        .score-box { padding: 10px 20px; border-radius: 10px; background: #222; }
     </style>
 </head>
 <body>
 
-    <h2>판 뒤집기 게임</h2>
-    <div class="game-board" id="board"></div>
-    <button onclick="initGame()">게임 재시작</button>
+    <h2>타자 판 뒤집기</h2>
+    
+    <div class="info">
+        <div class="score-box">나: <span id="p-score">0</span></div>
+        <div class="score-box">컴퓨터: <span id="e-score">0</span></div>
+    </div>
+
+    <div id="game-container">
+        <div class="board" id="board"></div>
+        <br>
+        <input type="text" id="input-field" placeholder="단어를 입력하고 엔터!" autofocus>
+    </div>
 
     <script>
-        // JS: 로직
-        const board = document.getElementById('board');
-        const items = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊']; // 6종류
-        let cardValues = [...items, ...items]; // 각 2장씩 총 12장
-        let flippedCards = []; // 현재 뒤집힌 카드 배열
-        let matchedCount = 0;  // 맞춘 카드 개수
+        // 게임에 사용할 단어 리스트
+        const words = ["사과", "포도", "바나나", "컴퓨터", "자바스크립트", "고양이", "강아지", "대한민국", "우주", "바다", "하늘", "자동차", "호랑이", "코끼리", "비행기", "사자", "토끼", "기차", "수박", "딸기"];
+        
+        let boardData = [];
+        const boardEl = document.getElementById('board');
+        const inputEl = document.getElementById('input-field');
+        const pScoreEl = document.getElementById('p-score');
+        const eScoreEl = document.getElementById('e-score');
 
-        // 게임 초기화 함수
+        // 게임 초기화
         function initGame() {
-            board.innerHTML = '';
-            flippedCards = [];
-            matchedCount = 0;
+            boardData = [];
+            boardEl.innerHTML = '';
             
-            // 카드 섞기
-            cardValues.sort(() => Math.random() - 0.5);
+            // 16개의 랜덤 단어로 판 채우기
+            let shuffleWords = [...words].sort(() => Math.random() - 0.5);
+            for (let i = 0; i < 16; i++) {
+                boardData.push({
+                    word: shuffleWords[i % shuffleWords.length],
+                    owner: 'none' // 'none', 'player', 'enemy'
+                });
+            }
+            renderBoard();
+        }
 
-            // 카드 생성
-            cardValues.forEach((val) => {
-                const card = document.createElement('div');
-                card.classList.add('card');
-                card.innerHTML = `
-                    <div class="card-inner">
-                        <div class="card-back">?</div>
-                        <div class="card-front">${val}</div>
-                    </div>
-                `;
-                card.addEventListener('click', () => flipCard(card, val));
-                board.appendChild(card);
+        // 판 그리기
+        function renderBoard() {
+            boardEl.innerHTML = '';
+            let pScore = 0;
+            let eScore = 0;
+
+            boardData.forEach((data, index) => {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                if (data.owner === 'player') { cell.classList.add('player'); pScore++; }
+                if (data.owner === 'enemy') { cell.classList.add('enemy'); eScore++; }
+                cell.innerText = data.word;
+                boardEl.appendChild(cell);
             });
-        }
 
-        // 카드 뒤집기 로직
-        function flipCard(card, val) {
-            // 이미 뒤집혔거나, 2장이 이미 뒤집혀 확인 중이면 클릭 방지
-            if (card.classList.contains('flipped') || flippedCards.length === 2) return;
+            pScoreEl.innerText = pScore;
+            eScoreEl.innerText = eScore;
 
-            card.classList.add('flipped');
-            flippedCards.push({ card, val });
-
-            if (flippedCards.length === 2) {
-                checkMatch();
+            if (pScore + eScore === 16) {
+                const winner = pScore > eScore ? "승리!" : "패배...";
+                alert(`게임 종료! 결과: ${pScore} 대 ${eScore}로 당신의 ${winner}`);
+                initGame();
             }
         }
 
-        // 일치 여부 확인
-        function checkMatch() {
-            const [first, second] = flippedCards;
-
-            if (first.val === second.val) {
-                // 일치할 경우
-                matchedCount += 2;
-                flippedCards = [];
-                if (matchedCount === cardValues.length) {
-                    setTimeout(() => alert('성공! 모든 짝을 찾았습니다!'), 500);
+        // 유저 입력 확인
+        inputEl.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const val = inputEl.value.trim();
+                const target = boardData.find(d => d.word === val && d.owner !== 'player');
+                
+                if (target) {
+                    target.owner = 'player';
+                    renderBoard();
                 }
-            } else {
-                // 일치하지 않을 경우 (1초 뒤 다시 뒤집기)
-                setTimeout(() => {
-                    first.card.classList.remove('flipped');
-                    second.card.classList.remove('flipped');
-                    flippedCards = [];
-                }, 1000);
+                inputEl.value = '';
             }
+        });
+
+        // 컴퓨터 로직 (일정 시간마다 단어 선점)
+        function enemyTurn() {
+            const targets = boardData.filter(d => d.owner !== 'enemy');
+            if (targets.length > 0) {
+                const randomTarget = targets[Math.floor(Math.random() * targets.length)];
+                randomTarget.owner = 'enemy';
+                renderBoard();
+            }
+            // 난이도 조절: 컴퓨터가 단어를 치는 속도 (3초마다 하나씩)
+            setTimeout(enemyTurn, 3000);
         }
 
-        // 페이지 로드 시 게임 시작
         initGame();
+        setTimeout(enemyTurn, 2000); // 2초 후 컴퓨터 시작
     </script>
 </body>
 </html>
