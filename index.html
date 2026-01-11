@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>MAFIA: NATION BUILDER v29.0</title>
+    <title>MAFIA: NATION BUILDER v30.0</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
@@ -20,13 +20,13 @@
         .start-btn { padding: 30px 80px; font-size: 3rem; background: var(--neon); color: #000; border: none; cursor: pointer; border-radius: 15px; font-family: 'DungGeunMo'; box-shadow: 0 0 20px var(--neon); }
 
         /* 상단 대시보드 */
-        #top-dashboard { height: 150px; background: #111; border-bottom: 5px solid #444; display: flex; flex-direction: column; position: relative; }
+        #top-dashboard { height: 160px; background: #111; border-bottom: 5px solid #444; display: flex; flex-direction: column; position: relative; }
         .top-main { display: flex; align-items: center; justify-content: space-between; flex: 1; padding: 0 20px; }
-        #timer-disp { font-size: 3.5rem; color: var(--yellow); min-width: 160px; text-align: center; }
+        #timer-disp { font-size: 4rem; color: var(--yellow); min-width: 180px; text-align: center; }
         
-        /* 10초 셔플 바 (중요: 가시성 확보) */
-        #shuffle-container { width: 100%; height: 12px; background: #222; position: relative; overflow: hidden; }
-        #shuffle-bar { width: 100%; height: 100%; background: var(--neon); box-shadow: 0 0 10px var(--neon); transition: width 0.1s linear; }
+        /* 10초 셔플 바 */
+        #shuffle-container { width: 100%; height: 15px; background: #222; position: relative; }
+        #shuffle-bar { width: 100%; height: 100%; background: var(--neon); box-shadow: 0 0 15px var(--neon); transition: width 0.1s linear; }
 
         .territory-zone { display: flex; gap: 10px; }
         .ter-card { background: #222; border: 2px solid #555; padding: 5px; width: 130px; text-align: center; border-radius: 8px; position: relative; }
@@ -36,18 +36,16 @@
         .up-btn { position: absolute; inset: 0; background: var(--yellow); color: #000; border: none; font-family: 'DungGeunMo'; font-size: 1.2rem; font-weight: bold; cursor: pointer; display: none; z-index: 100; border-radius: 6px; }
 
         /* 게임 영역 */
-        #game-view { flex: 1; display: flex; flex-direction: column; position: relative; transition: background 0.3s; }
-        .board { flex: 1; display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; padding: 15px; background: rgba(0,0,0,0.85); }
-        .card { background: rgba(255,255,255,0.05); border: 1px solid #333; color: #888; display: flex; align-items: center; justify-content: center; font-size: 1rem; border-radius: 4px; font-weight: bold; text-align: center; }
-        
-        /* 점유 카드 디자인 강화 */
-        .card.owned-red { background: var(--red) !important; color: #fff !important; border: 2px solid #fff !important; box-shadow: 0 0 15px var(--red); z-index: 10; }
-        .card.owned-blue { background: var(--blue) !important; color: #fff !important; border: 2px solid #fff !important; box-shadow: 0 0 15px var(--blue); z-index: 10; }
+        #game-view { flex: 1; display: flex; flex-direction: column; position: relative; }
+        .board { flex: 1; display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; padding: 15px; background: rgba(0,0,0,0.8); }
+        .card { background: rgba(255,255,255,0.05); border: 1px solid #333; color: #888; display: flex; align-items: center; justify-content: center; font-size: 1rem; border-radius: 4px; font-weight: bold; }
+        .card.owned-red { background: var(--red) !important; color: #fff !important; border: 2px solid #fff !important; box-shadow: 0 0 15px var(--red); }
+        .card.owned-blue { background: var(--blue) !important; color: #fff !important; border: 2px solid #fff !important; box-shadow: 0 0 15px var(--blue); }
 
         .input-area { height: 100px; background: #000; display: flex; align-items: center; padding: 0 20px; border-top: 5px solid var(--yellow); }
-        .input-box { flex: 1; height: 60px; background: #111; border: 3px solid var(--yellow); font-size: 3rem; text-align: center; color: #fff; font-family: 'DungGeunMo'; outline: none; }
+        .input-box { flex: 1; height: 70px; background: #111; border: 3px solid var(--yellow); font-size: 3rem; text-align: center; color: #fff; font-family: 'DungGeunMo'; outline: none; }
 
-        .watcher { position: fixed; inset: 0; background: rgba(255,0,0,0.2); border: 30px solid var(--red); z-index: 9999; display: none; align-items: center; justify-content: center; flex-direction: column; pointer-events: none; }
+        .watcher { position: fixed; inset: 0; background: rgba(255,0,0,0.2); border: 30px solid var(--red); z-index: 9999; display: none; align-items: center; justify-content: center; flex-direction: column; }
         #countdown { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 11000; display: none; align-items: center; justify-content: center; font-size: 20rem; color: var(--yellow); }
     </style>
 </head>
@@ -82,7 +80,8 @@
 </div>
 
 <script>
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('mafia_v29');
+    // Firebase 경로 고정 (v30)
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('mafia_v30_final');
 
     const cats = ['에너지','인프라','자본','기술','문화'];
     const stages = ['공터','마을','도시','개도국','선진국'];
@@ -94,7 +93,7 @@
         '문화': ['영화','예술','음악','관광','게임','웹툰','역사','언어','백신','의료','교육','철학','논리','법률','전통','패션','스포츠','축제','방송','미디어']
     };
 
-    let myId = 0, isLocalActive = false, watcherActive = false, mainTimer = null;
+    let myId = 0, gameActive = false, watcherActive = false, timerRef = null;
     let pCards = {}, levels = {red:[0,0,0,0,0], blue:[0,0,0,0,0]}, teams = {1:'red', 2:'red', 3:'blue', 4:'blue'}, curWords = [];
 
     function initMonitor(id) {
@@ -121,23 +120,33 @@
         teams = d.teams || teams;
         curWords = d.curWords || [];
 
-        if(d.state === 'COUNTDOWN' && !isLocalActive) {
+        if(d.state === 'COUNTDOWN' && !gameActive) {
             runCountdown();
-        } else if(d.state === 'RUNNING' && !isLocalActive) {
-            startGameEngine();
+        } else if(d.state === 'RUNNING' && !gameActive) {
+            runTimerEngine();
         } else if(d.state === 'FINISHED') {
-            stopGame();
+            gameActive = false;
+            clearInterval(timerRef);
+            alert("게임 종료!");
+            location.reload();
         }
         updateUI();
     });
 
+    // 시작 시 단어 생성을 먼저 보장함
     function requestGlobalStart() {
         const shuffled = Object.values(wordLib).flat().sort(() => Math.random() - 0.5).slice(0, 100);
-        db.update({ state: 'COUNTDOWN', cards: {}, curWords: shuffled, levels: {red:[0,0,0,0,0], blue:[0,0,0,0,0]} });
+        db.set({
+            state: 'COUNTDOWN',
+            cards: {},
+            curWords: shuffled,
+            levels: {red:[0,0,0,0,0], blue:[0,0,0,0,0]},
+            teams: {1:'red', 2:'red', 3:'blue', 4:'blue'}
+        });
     }
 
     function runCountdown() {
-        isLocalActive = true;
+        gameActive = true;
         document.getElementById('lobby').style.display = 'none';
         const cd = document.getElementById('countdown');
         cd.style.display = 'flex';
@@ -153,53 +162,43 @@
         }, 1000);
     }
 
-    function startGameEngine() {
-        isLocalActive = true;
-        let timeLeft = 120, shuffleLeft = 10;
-        
-        if(mainTimer) clearInterval(mainTimer);
-        
-        mainTimer = setInterval(() => {
-            timeLeft--; shuffleLeft--;
-            
-            // UI 업데이트
-            document.getElementById('timer-disp').innerText = `${Math.floor(timeLeft/60)}:${(timeLeft%60).toString().padStart(2,'0')}`;
-            document.getElementById('shuffle-bar').style.width = (shuffleLeft / 10 * 100) + "%";
+    function runTimerEngine() {
+        gameActive = true;
+        let time = 120, shuffle = 10;
+        if(timerRef) clearInterval(timerRef);
 
-            // 팀 셔플 로직
-            if(shuffleLeft <= 0) {
-                shuffleLeft = 10;
+        timerRef = setInterval(() => {
+            time--; shuffle--;
+            
+            // 타이머 텍스트 업데이트
+            document.getElementById('timer-disp').innerText = `${Math.floor(time/60)}:${(time%60).toString().padStart(2,'0')}`;
+            
+            // 셔플 바 너비 업데이트
+            const bar = document.getElementById('shuffle-bar');
+            if(bar) bar.style.width = (shuffle / 10 * 100) + "%";
+
+            if(shuffle <= 0) {
+                shuffle = 10;
                 if(myId === 1) {
-                    const pool = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
-                    const nt = {}; for(let i=1; i<=4; i++) nt[i] = pool[i-1];
+                    const p = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
+                    const nt = {}; for(let i=1; i<=4; i++) nt[i] = p[i-1];
                     db.child('teams').set(nt);
                 }
             }
 
-            // 감시 모드 로직 (30초마다)
-            if(timeLeft > 0 && timeLeft % 30 === 0) {
+            if(time > 0 && time % 30 === 0) {
                 watcherActive = true;
                 setTimeout(() => { watcherActive = false; }, 2000);
             }
 
-            if(timeLeft <= 0) {
-                if(myId === 1) db.update({ state: 'FINISHED' });
-                stopGame();
-            }
+            if(time <= 0 && myId === 1) db.update({ state: 'FINISHED' });
         }, 1000);
-    }
-
-    function stopGame() {
-        clearInterval(mainTimer);
-        isLocalActive = false;
-        alert("게임이 종료되었습니다!");
-        location.reload();
     }
 
     function handleInput(e) {
         if(watcherActive) {
-            const myTeam = teams[myId];
-            const owned = Object.keys(pCards).filter(w => pCards[w] === myTeam);
+            const team = teams[myId];
+            const owned = Object.keys(pCards).filter(w => pCards[w] === team);
             if(owned.length >= 2) {
                 db.child('cards').child(owned[0]).remove();
                 db.child('cards').child(owned[1]).remove();
@@ -248,18 +247,16 @@
                 else if(pCards[w] === 'blue') cls = "owned-blue";
                 return `<div class="card ${cls}">${w}</div>`;
             }).join('');
+        } else {
+            board.innerHTML = "<h1 style='grid-column: span 10; text-align:center;'>대기 중...</h1>";
         }
     }
 
     function refocus() { 
         const typer = document.getElementById('typer');
-        if(typer) typer.focus(); 
+        if(typer && document.activeElement !== typer) typer.focus(); 
     }
-    
-    // 강제 포커스 루프
-    setInterval(() => {
-        if(isLocalActive) refocus();
-    }, 1000);
+    setInterval(refocus, 1000);
 </script>
 </body>
 </html>
