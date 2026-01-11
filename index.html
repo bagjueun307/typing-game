@@ -1,61 +1,74 @@
-// 1. Firebase 설정 (본인의 정보를 입력하면 더 정확합니다)
-const firebaseConfig = {
-    databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/"
-};
+// [수정] 타이머 함수: 보너스 생성 및 감시 모드 제어 포함
+function startTimer() {
+    let time = 120, shuffle = 10, bonusTick = 20;
+    if(timerIntr) clearInterval(timerIntr);
 
-// 초기화 확인
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
+    timerIntr = setInterval(() => {
+        time--; shuffle--; bonusTick--;
+        
+        // UI 업데이트
+        document.getElementById('timer-disp').innerText = Math.floor(time/60) + ":" + (time%60).toString().padStart(2,'0');
+        document.getElementById('shuffle-bar').style.width = (shuffle/10)*100 + "%";
+
+        if(myId === 1) { // 1번 모니터가 마스터 역할 수행
+            // 10초마다 팀 셔플
+            if(shuffle <= 0) {
+                const ts = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
+                db.update({ teams: { 1:ts[0], 2:ts[1], 3:ts[2], 4:ts[3] } });
+                shuffle = 10;
+            }
+            // 20초마다 보너스 단어 생성
+            if(bonusTick <= 0) {
+                const randomWord = currentWords[Math.floor(Math.random()*currentWords.length)];
+                db.update({ bonus: randomWord });
+                bonusTick = 20;
+                // 5초 뒤 보너스 만료
+                setTimeout(() => db.update({ bonus: "" }), 5000);
+            }
+            // 30초마다 감시 모드 신호 (DB에 기록하여 모든 모니터 동기화)
+            if(time > 0 && time % 30 === 0) {
+                db.update({ watching: true });
+                setTimeout(() => db.update({ watching: false }), 2000);
+            }
+        }
+
+        if(time <= 0) { 
+            clearInterval(timerIntr); 
+            if(myId === 1) db.update({ state: 'FINISHED' }); 
+        }
+    }, 1000);
 }
-const db = firebase.database().ref('mafia_v31_final');
 
-// ... 기존 변수 설정 (cats, stages, wordLib 등 동일) ...
-
-// [수정] 게임 시작 트리거: 모든 모니터의 데이터를 초기화하고 시작 신호를 보냄
-function triggerStart() {
-    console.log("Game Start Triggered!");
-    const shuffled = Object.values(wordLib).flat().sort(() => Math.random() - 0.5).slice(0, 100);
-    
-    // set 대신 update를 사용하여 특정 노드부터 확실히 초기화
-    db.set({
-        state: 'COUNTDOWN',
-        cards: {}, // 점유 카드 초기화
-        curWords: shuffled,
-        levels: {red:[0,0,0,0,0], blue:[0,0,0,0,0]},
-        teams: {1:'red', 2:'red', 3:'blue', 4:'blue'},
-        startTime: firebase.database.ServerValue.TIMESTAMP // 서버 시간 기준 동기화
-    }).then(() => {
-        console.log("Database Initialized");
-    }).catch(e => {
-        alert("데이터베이스 연결 오류: " + e.message);
-    });
-}
-
-// [수정] handleInput: 감시 모드 시 패널티 강화
-function handleInput(e) {
+// [수정] 입력 처리: 감시 모드 패널티 로직 추가
+function handleInput(e, id) {
     if(e.key !== 'Enter') return;
     const val = e.target.value.trim();
-    if(!val) return;
+    const team = currentTeams[id];
 
-    if(isWatcher) {
-        // 감시 모드일 때 타자를 치면 즉시 패널티
-        const team = teams[myId];
-        db.child('cards').once('value', snap => {
-            const currentCards = snap.val() || {};
-            const owned = Object.keys(currentCards).filter(w => currentCards[w] === team);
-            if(owned.length >= 2) {
-                // 내 카드 2개를 무작위로 제거 (중립화)
-                db.child('cards').child(owned[0]).remove();
-                db.child('cards').child(owned[1]).remove();
+    // 감시 모드 체크 (DB 필드 'watching' 기준)
+    db.child('watching').once('value', snap => {
+        if(snap.val() === true) {
+            // 패널티: 내 카드 2개 무작위 삭제
+            const myCards = Object.keys(pCards).filter(w => pCards[w] === team);
+            if(myCards.length >= 2) {
+                db.child('cards').child(myCards[0]).remove();
+                db.child('cards').child(myCards[1]).remove();
             }
-        });
-        e.target.value = ""; 
-        return;
-    }
+            e.target.value = "PENALTY!!!";
+            setTimeout(() => e.target.value = "", 500);
+            return;
+        }
 
-    // 정상 입력
-    if(curWords.includes(val)) {
-        db.child('cards').child(val).set(teams[myId]);
-    }
-    e.target.value = "";
+        // 보너스 단어 처리
+        if(val === bonusWord && bonusWord !== "") {
+            // 상대팀 카드 5개를 뺏어오는 파괴적인 효과
+            const enemy = (team === 'red' ? 'blue' : 'red');
+            const enemyCards = Object.keys(pCards).filter(w => pCards[w] === enemy);
+            enemyCards.slice(0, 5).forEach(w => db.child('cards').child(w).set(team));
+            db.update({ bonus: "" });
+        } else if(currentWords.includes(val)) {
+            db.child('cards').child(val).set(team);
+        }
+        e.target.value = "";
+    });
 }
