@@ -2,204 +2,282 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>NATION BUILDER: LAND GRAB</title>
+    <title>NATION BUILDER v20.9 - Combat Ready</title>
     <link href="https://fonts.googleapis.com/css2?family=DungGeunMo&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --red: #ff4757; --blue: #2e86de; --yellow: #f1c40f; --dark: #0a0a0f; --neon: #00ffdd; }
-        body { background: var(--dark); color: #fff; font-family: 'DungGeunMo'; margin: 0; overflow: hidden; }
+        :root { --dark: #050505; --red: #ff1a1a; --blue: #1a75ff; --yellow: #ffea00; --neon: #00ff41; }
+        body { background: var(--dark); color: #fff; font-family: 'DungGeunMo', monospace; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
-        #top-bar { position: fixed; top: 0; left: 0; right: 0; height: 110px; background: #15151a; border-bottom: 4px solid var(--yellow); display: flex; justify-content: space-around; align-items: center; z-index: 6000; }
-        #timer-disp { font-size: 2.5rem; color: var(--yellow); }
-        .score-board { font-size: 1.8rem; display: flex; gap: 40px; align-items: center; }
-
-        #room-view { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; padding: 130px 20px 20px 20px; height: 100vh; box-sizing: border-box; }
-        .monitor { border: 4px solid #333; background: #000; display: flex; flex-direction: column; position: relative; border-radius: 10px; overflow: hidden; }
-        .monitor.focused { position: fixed !important; inset: 120px 20px 20px 20px; z-index: 5000; border-color: var(--neon); }
-
-        /* 4x4 그리드 보드 */
-        .board { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 8px; flex: 1; padding: 15px; background: #050505; }
-        .tile { border: 1px solid #222; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; position: relative; background: #111; color: #444; border-radius: 5px; }
+        /* 상단 바 */
+        #top-bar { height: 110px; background: #000; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; border-bottom: 4px solid #333; }
+        #timer-disp { font-size: 3.5rem; color: var(--yellow); text-shadow: 0 0 20px var(--yellow); }
         
-        /* 실시간 점유 색상 */
-        .tile.red { background: var(--red); color: #fff; border: none; box-shadow: 0 0 10px var(--red); }
-        .tile.blue { background: var(--blue); color: #fff; border: none; box-shadow: 0 0 10px var(--blue); }
-        
-        /* 영구 소유(구매 완료) 색상 */
-        .tile.perm-red { background: var(--red) !important; color: #fff !important; border: 4px solid #fff !important; }
-        .tile.perm-blue { background: var(--blue) !important; color: #fff !important; border: 4px solid #fff !important; }
-        .tile.perm-red::before, .tile.perm-blue::before { content: 'OWNED'; position: absolute; top: 2px; font-size: 0.6rem; opacity: 0.8; }
+        .territory-status { display: flex; gap: 15px; flex: 1; justify-content: center; }
+        .icon-box { display: flex; flex-direction: column; align-items: center; min-width: 90px; padding: 8px; background: #0a0a0a; border: 1px solid #444; border-radius: 5px; }
 
-        .input-wrap { display: flex; height: 90px; border-top: 4px solid var(--yellow); }
-        .input-box { flex: 1; background: #000; color: var(--neon); border: none; font-size: 3.5rem; text-align: center; outline: none; font-family: 'DungGeunMo'; }
+        /* 게임 화면 */
+        #room-view { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; padding: 10px; background: #111; }
+        .monitor { border: 4px solid #333; position: relative; display: flex; flex-direction: column; background: #000; transition: 0.3s; }
+        .monitor.team-red { border-color: var(--red); box-shadow: inset 0 0 50px rgba(255, 26, 26, 0.1); }
+        .monitor.team-blue { border-color: var(--blue); box-shadow: inset 0 0 50px rgba(26, 117, 255, 0.1); }
+        .monitor.focused { position: fixed !important; inset: 125px 10px 10px 10px; z-index: 5000; }
 
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .gate-btn { padding: 20px 50px; font-family: 'DungGeunMo'; font-size: 2rem; background: var(--yellow); border: none; cursor: pointer; border-radius: 10px; }
+        .team-indicator { position: absolute; top: 10px; left: 10px; font-size: 1.5rem; font-weight: bold; padding: 8px 20px; border-radius: 5px; z-index: 10; border: 2px solid #fff; }
+        .indicator-red { background: var(--red); color: white; box-shadow: 0 0 15px var(--red); }
+        .indicator-blue { background: var(--blue); color: white; box-shadow: 0 0 15px var(--blue); }
+
+        /* 카운트다운 레이어 */
+        #countdown-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9000; display: none; align-items: center; justify-content: center; font-size: 15rem; color: var(--yellow); text-shadow: 0 0 50px var(--yellow); font-style: italic; }
+
+        .board { flex: 1; display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr); gap: 3px; padding: 10px; }
+        .card { background: #1a1a1a; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; border: 1px solid #333; color: #555; }
+        .card.owned-red { background: var(--red) !important; color: white; border: none; font-weight: bold; }
+        .card.owned-blue { background: var(--blue) !important; color: white; border: none; font-weight: bold; }
+        .card.steal-ready { border: 1px dashed var(--yellow); }
+
+        .up-btn { background: var(--neon); color: #000; border: none; font-family: 'DungGeunMo'; font-weight: bold; font-size: 0.9rem; cursor: pointer; padding: 5px 12px; border-radius: 3px; animation: blink 0.5s infinite; }
+        .input-wrap { height: 100px; display: flex; border-top: 3px solid #333; }
+        .input-box { flex: 1; background: transparent; border: none; font-size: 4rem; text-align: center; color: #fff; font-family: 'DungGeunMo'; outline: none; }
+
+        #result-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        @keyframes blink { 50% { opacity: 0.3; } }
     </style>
 </head>
 <body>
 
-<div id="lobby-screen" class="overlay">
-    <h1 style="color:var(--yellow); font-size: 4rem; margin-bottom: 10px;">LAND GRAB</h1>
-    <p style="font-size: 1.5rem; color: #aaa;">16칸 중 9칸을 먼저 차지하여 영토를 구매하세요.</p>
-    <button class="gate-btn" onclick="startNewRound()">전쟁 개시</button>
+<div id="top-bar">
+    <div style="font-size:1.5rem; color:#666;">OPERATION</div>
+    <div id="timer-disp">02:00</div>
+    <div class="territory-status" id="top-status-bar"></div>
 </div>
 
-<div id="top-bar">
-    <div class="score-board">
-        <span style="color:var(--red)">RED <span id="p-red">0</span></span>
-        <span id="round-title" style="color:var(--yellow); font-size: 1.2rem; border: 1px solid var(--yellow); padding: 5px 15px;">ROUND 1 / 16</span>
-        <span style="color:var(--blue)">BLUE <span id="p-blue">0</span></span>
-    </div>
-    <div id="timer-disp">SHUFFLE: 10s</div>
-</div>
+<div id="countdown-overlay"></div>
 
 <div id="room-view">
     <script>
+        const cityNames = ['발전','강철','자본','미래','지혜'];
+        const rankIcons = ['fa-microchip','fa-database','fa-server','fa-shield-virus','fa-globe'];
+        const rankLabels = ['미등록','베이스','메인프레임','공격모드','네트워크'];
+
+        // 상단 바 초기화
+        const topBar = document.getElementById('top-status-bar');
+        cityNames.forEach((n, i) => {
+            topBar.innerHTML += `<div class="icon-box"><i class="fas ${['fa-bolt','fa-industry','fa-coins','fa-microchip','fa-book'][i]}" id="top-icon-${i}"></i><span>${n}</span><div id="stat-${i}" style="font-size:0.8rem; color:var(--neon)">-</div></div>`;
+        });
+
         for(let i=1; i<=4; i++) {
             document.write(`
                 <div class="monitor" id="mon-${i}" onclick="zoomIn(${i})">
-                    <div id="board-${i}" class="board"></div>
-                    <div class="input-wrap"><input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="접속 대기" disabled autocomplete="off"></div>
+                    <div id="team-ind-${i}" class="team-indicator">SYNCING...</div>
+                    <div class="gate" id="gate-${i}" style="position:absolute; inset:0; background:rgba(0,0,0,0.9); z-index:100; display:flex; align-items:center; justify-content:center;">
+                        <button onclick="requestStart(event)" style="padding:25px 50px; font-size:2rem; font-family:'DungGeunMo'; background:var(--yellow); border:none; cursor:pointer; border-radius:10px;">START ROUND</button>
+                    </div>
+                    
+                    <div style="display:flex; justify-content:space-around; background:#000; padding:15px; border-bottom:1px solid #333; margin-top:55px;">
+                        ${cityNames.map((c, idx) => `
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span id="icon-wrap-${i}-${idx}" style="font-size:1.3rem;"><i class="fas ${rankIcons[0]}"></i></span>
+                                <span style="font-size:0.9rem;">${c}</span>
+                                <button id="up-btn-${i}-${idx}" class="up-btn" style="display:none" onclick="upgradeCity(event, ${i}, ${idx})">UP</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="board" id="board-${i}"></div>
+                    <div class="input-wrap"><input type="text" id="in-${i}" class="input-box" onkeydown="handleInput(event, ${i})" placeholder="STAND BY..." disabled autocomplete="off"></div>
                 </div>
             `);
         }
     </script>
 </div>
 
+<div id="result-screen">
+    <h1 style="color:var(--yellow); font-size:3.5rem;">STRATEGIC EVALUATION</h1>
+    <div style="display:flex; align-items:center; gap:60px; background:#0a0a0a; padding:40px; border:1px solid #444;">
+        <canvas id="radarChart" width="400" height="400"></canvas>
+        <div style="display:flex; gap:50px;">
+            <div id="report-red" style="color:var(--red); font-size:1.3rem;"></div>
+            <div id="report-blue" style="color:var(--blue); font-size:1.3rem;"></div>
+        </div>
+    </div>
+    <button onclick="nextRound()" style="margin-top:40px; padding:20px 80px; background:var(--yellow); border:none; cursor:pointer; font-family:'DungGeunMo'; font-size:2rem;">PROCEED TO NEXT ROUND</button>
+</div>
+
 <script>
-    // Firebase 연결 (본인의 URL로 교체하세요)
-    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('land_grab_v1');
+    const db = firebase.initializeApp({ databaseURL: "https://play1-d0379-default-rtdb.firebaseio.com/" }).database().ref('nation_v20_9');
+    
+    const fullWordList = [
+        '전력','발전','에너지','태양','원자','석유','석탄','풍력','수력','가스','배터리','송전','전압','그리드','조력','변전','핵융합','수소','탄소','그린',
+        '강철','합금','금속','엔진','기계','로봇','공장','자동차','선박','반도체','프레스','주조','용접','망치','볼트','드릴','선반','공작','금형','산업',
+        '은행','금리','주식','채권','투자','환율','예산','보험','세금','금융','펀드','환전','자산','신용','예금','대출','증권','코인','지폐','금고',
+        '서버','코딩','보안','네트','데이터','센서','드론','해킹','인공','지능','클라우드','양자','위성','머신','알고','가상','증강','메타','칩셋','모바일',
+        '대학','교육','의료','백신','역사','과학','철학','논리','법률','언어','문화','심리','인문','수학','예술','지리','물리','화학','생물','연구'
+    ];
 
-    const wordList = ['강철','엔진','보안','네트','코드','데이터','위성','로봇','미래','자본','투자','은행','지혜','연구','에너지','전기'];
-    let myId = 0, currentTeams = {1:'red', 2:'red', 3:'blue', 4:'blue'};
-    let gameState = {};
-
-    function startNewRound() {
-        const resetRoundTiles = {};
-        wordList.forEach(w => resetRoundTiles[w] = "none");
-        db.update({ 
-            status: 'PLAYING',
-            roundTiles: resetRoundTiles,
-            winnerFound: false
-        });
-        document.getElementById('lobby-screen').style.display = 'none';
-    }
+    let active = false, pCards = {}, cityLevels = { red:[0,0,0,0,0], blue:[0,0,0,0,0] }, currentTeams = {1:'red', 2:'red', 3:'blue', 4:'blue'}, focusedId = null;
 
     function zoomIn(id) {
-        myId = id;
+        focusedId = id;
         document.querySelectorAll('.monitor').forEach(m => m.classList.remove('focused'));
         document.getElementById(`mon-${id}`).classList.add('focused');
-        document.getElementById(`in-${id}`).disabled = false;
-        document.getElementById(`in-${id}`).focus();
+        if(!active) {
+            document.querySelectorAll('.gate').forEach(g => g.style.display = 'none');
+            document.getElementById(`gate-${id}`).style.display = 'flex';
+        }
     }
 
-    function handleInput(e, id) {
-        if(e.key === 'Enter') {
-            const val = e.target.value.trim();
-            if(wordList.includes(val)) {
-                // 영구 소유된 땅은 뒤집을 수 없음
-                if(!gameState.permOwned || !gameState.permOwned[val]) {
-                    db.child('roundTiles').child(val).set(currentTeams[id]);
-                }
-            }
-            e.target.value = "";
-        }
+    // 시작 버튼 클릭 시 DB 상태를 'COUNTDOWN'으로 변경
+    function requestStart(e) { 
+        e.stopPropagation(); 
+        db.update({ state: 'COUNTDOWN', cards: {} }); 
     }
 
     db.on('value', snap => {
         const d = snap.val(); if(!d) return;
-        gameState = d;
-        if(d.teams) currentTeams = d.teams;
-        render(d);
-        checkWinner(d);
+        pCards = d.cards || {};
+        cityLevels = d.levels || { red:[0,0,0,0,0], blue:[0,0,0,0,0] };
+        currentTeams = d.teams || currentTeams;
+
+        // 카운트다운 로직 추가
+        if(d.state === 'COUNTDOWN' && !active) {
+            runCountdown();
+        } else if(d.state === 'RUNNING' && !active) {
+            startGame();
+        } else if(d.state === 'FINISHED' && active) {
+            active = false; showResult();
+        }
+        updateUI();
     });
 
-    function render(d) {
-        // 상단 스코어 (영구 땅 개수)
-        const redPerms = Object.values(d.permOwned || {}).filter(v => v === 'red').length;
-        const bluePerms = Object.values(d.permOwned || {}).filter(v => v === 'blue').length;
-        document.getElementById('p-red').innerText = redPerms;
-        document.getElementById('p-blue').innerText = bluePerms;
-        document.getElementById('round-title').innerText = `ROUND ${d.roundNum || 1} / 16`;
+    function runCountdown() {
+        active = true; // 중복 실행 방지
+        const overlay = document.getElementById('countdown-overlay');
+        overlay.style.display = 'flex';
+        let count = 3;
+        
+        const timer = setInterval(() => {
+            overlay.innerText = count > 0 ? count : "GO!";
+            if(count < 0) {
+                clearInterval(timer);
+                overlay.style.display = 'none';
+                // 방장(혹은 첫번째 플레이어)이 게임 상태를 RUNNING으로 변경
+                if(focusedId === 1) db.update({ state: 'RUNNING' });
+            }
+            count--;
+        }, 1000);
+    }
 
+    function startGame() {
+        active = true;
+        document.querySelectorAll('.gate').forEach(g => g.style.display = 'none');
+        document.querySelectorAll('.input-box').forEach(inp => {
+            inp.disabled = false;
+            inp.placeholder = "INPUT DATA...";
+            inp.focus();
+        });
+        startTimer();
+    }
+
+    function handleInput(e, id) {
+        if(e.key !== 'Enter') return;
+        const val = e.target.value.trim();
+        const team = currentTeams[id];
+        const enemy = team === 'red' ? 'blue' : 'red';
+        const catIdx = Math.floor(fullWordList.indexOf(val) / 20);
+
+        if(fullWordList.includes(val)) {
+            const owner = pCards[val];
+            if(!owner) db.child('cards').child(val).set(team);
+            else if(owner === enemy && cityLevels[team][catIdx] >= 3) db.child('cards').child(val).set(team);
+        }
+        e.target.value = "";
+    }
+
+    function upgradeCity(e, monId, cityIdx) {
+        e.stopPropagation();
+        const team = currentTeams[monId];
+        const myCards = Object.keys(pCards).filter(w => pCards[w] === team && Math.floor(fullWordList.indexOf(w)/20) === cityIdx);
+        if(myCards.length >= 5 && cityLevels[team][cityIdx] < 4) {
+            myCards.slice(0, 5).forEach(w => db.child('cards').child(w).remove());
+            const newLevels = [...cityLevels[team]]; newLevels[cityIdx]++;
+            db.child('levels').child(team).set(newLevels);
+        }
+    }
+
+    function updateUI() {
         for(let i=1; i<=4; i++) {
-            const b = document.getElementById(`board-${i}`);
-            b.innerHTML = "";
-            wordList.forEach(w => {
-                const tile = document.createElement('div');
-                tile.className = 'tile';
-                tile.innerText = w;
+            const team = currentTeams[i];
+            const enemy = team === 'red' ? 'blue' : 'red';
+            const mon = document.getElementById(`mon-${i}`);
+            mon.className = `monitor team-${team} ${i===focusedId?'focused':''}`;
+            
+            const ind = document.getElementById(`team-ind-${i}`);
+            ind.innerText = `TEAM ${team.toUpperCase()}`;
+            ind.className = `team-indicator indicator-${team}`;
 
-                // 영구 땅 우선 표시
-                if(d.permOwned && d.permOwned[w]) {
-                    tile.classList.add(`perm-${d.permOwned[w]}`);
-                } 
-                // 이번 라운드 실시간 점유 표시
-                else if(d.roundTiles && d.roundTiles[w] !== "none") {
-                    tile.classList.add(d.roundTiles[w]);
-                }
-                b.appendChild(tile);
+            const board = document.getElementById(`board-${i}`);
+            board.innerHTML = "";
+            fullWordList.forEach(w => {
+                const owner = pCards[w];
+                const catIdx = Math.floor(fullWordList.indexOf(w)/20);
+                const div = document.createElement('div');
+                div.className = 'card' + (owner ? ` owned-${owner}` : '');
+                if(owner === enemy && cityLevels[team][catIdx] >= 3) div.classList.add('steal-ready');
+                div.innerText = w;
+                board.appendChild(div);
+            });
+
+            cityNames.forEach((_, idx) => {
+                const lv = cityLevels[team][idx];
+                document.getElementById(`icon-wrap-${i}-${idx}`).innerHTML = `<i class="fas ${rankIcons[lv]}" style="color:${lv>0?'#fff':'#444'}"></i>`;
+                const myCards = Object.keys(pCards).filter(w => pCards[w] === team && Math.floor(fullWordList.indexOf(w)/20) === idx);
+                document.getElementById(`up-btn-${i}-${idx}`).style.display = (myCards.length >= 5 && lv < 4) ? 'inline-block' : 'none';
+                
+                const maxLv = Math.max(cityLevels.red[idx], cityLevels.blue[idx]);
+                document.getElementById(`top-icon-${idx}`).style.color = maxLv > 0 ? 'var(--yellow)' : '#444';
+                document.getElementById(`stat-${idx}`).innerText = rankLabels[maxLv];
             });
         }
     }
 
-    function checkWinner(d) {
-        if(d.winnerFound || d.status !== 'PLAYING') return;
-
-        const tiles = d.roundTiles || {};
-        const redCount = Object.values(tiles).filter(v => v === 'red').length;
-        const blueCount = Object.values(tiles).filter(v => v === 'blue').length;
-
-        // 9칸 선점 시 승리
-        if(redCount >= 9 || blueCount >= 9) {
-            const winner = redCount >= 9 ? 'red' : 'blue';
-            if(myId === 1) finalizeRound(winner, d);
-        }
+    function startTimer() {
+        let time = 120;
+        const intr = setInterval(() => {
+            time--;
+            document.getElementById('timer-disp').innerText = Math.floor(time/60) + ":" + (time%60).toString().padStart(2,'0');
+            if(time <= 0 || !active) { clearInterval(intr); if(time<=0) db.update({ state: 'FINISHED' }); }
+        }, 1000);
     }
 
-    function finalizeRound(winner, d) {
-        db.child('winnerFound').set(true);
-        
-        // 아직 주인이 없는 땅 중 하나를 골라 구매
-        const available = wordList.filter(w => !d.permOwned || !d.permOwned[w]);
-        const purchasedLand = available[0]; 
-
-        alert(`${winner.toUpperCase()} 팀이 이번 라운드를 지배하여 [${purchasedLand}]을(를) 영구 점유합니다!`);
-
-        setTimeout(() => {
-            const nextRound = (d.roundNum || 1) + 1;
-            const updates = {};
-            updates[`permOwned/${purchasedLand}`] = winner; // 승점 1점으로 땅 구매 반영
-            updates[`roundNum`] = nextRound;
-            updates[`status`] = 'WAITING';
-            
-            if(nextRound > 16) {
-                alert("전쟁 종료! 영구 영토가 더 많은 팀이 최종 승리입니다.");
-                updates[`roundNum`] = 1;
-                updates[`permOwned`] = {};
-            }
-            db.update(updates);
-            document.getElementById('lobby-screen').style.display = 'flex';
-        }, 2000);
+    function showResult() {
+        document.getElementById('result-screen').style.display = 'flex';
+        const ctx = document.getElementById('radarChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: cityNames,
+                datasets: [
+                    { label: 'RED TEAM', data: cityLevels.red, backgroundColor: 'rgba(255,0,0,0.4)', borderColor: 'red' },
+                    { label: 'BLUE TEAM', data: cityLevels.blue, backgroundColor: 'rgba(0,0,255,0.4)', borderColor: 'blue' }
+                ]
+            },
+            options: { scales: { r: { min:0, max:4, ticks:{display:false}, grid:{color:'#444'}, pointLabels:{color:'#fff', font:{size:16}} } } }
+        });
+        ['red','blue'].forEach(t => {
+            let html = `<h2 style="border-bottom:2px solid">TEAM ${t.toUpperCase()}</h2>`;
+            cityNames.forEach((n, idx) => html += `<div style="margin:10px 0"><i class="fas ${rankIcons[cityLevels[t][idx]]}"></i> ${n}: ${rankLabels[cityLevels[t][idx]]}</div>`);
+            document.getElementById(`report-${t}`).innerHTML = html;
+        });
     }
 
-    // 10초 셔플 로직
-    let shuffleTime = 10;
-    setInterval(() => {
-        if(gameState.status === 'PLAYING') {
-            shuffleTime--;
-            document.getElementById('timer-disp').innerText = `SHUFFLE: ${shuffleTime}s`;
-            if(shuffleTime <= 0) {
-                if(myId === 1) {
-                    const ts = ['red','red','blue','blue'].sort(()=>Math.random()-0.5);
-                    db.update({ teams: { 1:ts[0], 2:ts[1], 3:ts[2], 4:ts[3] } });
-                }
-                shuffleTime = 10;
-            }
-        }
-    }, 1000);
+    function nextRound() {
+        db.update({ state: 'READY', cards: {} });
+        document.getElementById('result-screen').style.display = 'none';
+        active = false;
+    }
 </script>
 </body>
 </html>
